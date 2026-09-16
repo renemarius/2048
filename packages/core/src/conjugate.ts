@@ -122,3 +122,33 @@ export function conjugateOpenDiphthong(word: string, tense: Tense): string {
   const pastSyllable = composeSyllable(decomposed.initial, diphthongMedial, 'ㅆ');
   return stemHead + pastSyllable + '어요';
 }
+
+/**
+ * Auto-detecting dispatcher: picks the right pattern-group function from
+ * the word's own shape (하다-ending, batchim presence, then vowel class),
+ * so callers (e.g. board.ts) don't need to track which group a word
+ * belongs to separately from the word itself.
+ */
+export function conjugate(word: string, tense: Tense): string {
+  if (word.endsWith('하다')) {
+    return conjugateHada(word, tense);
+  }
+  const stem = stripDaSuffix(word);
+  const lastChar = stem[stem.length - 1];
+  const decomposed = decomposeSyllable(lastChar);
+  if (!decomposed) {
+    throw new Error(`Not a valid Hangul syllable: ${lastChar}`);
+  }
+  if (decomposed.final !== '') {
+    return conjugateBatchimFinal(word, tense);
+  }
+  if (ELISION_VOWELS.has(decomposed.medial)) {
+    return conjugateOpenElision(word, tense);
+  }
+  if (decomposed.medial in DIPHTHONG_VOWELS) {
+    return conjugateOpenDiphthong(word, tense);
+  }
+  throw new Error(
+    `No v1 conjugation rule covers "${word}" (final vowel "${decomposed.medial}") — see specs/vocab-v1.md`,
+  );
+}

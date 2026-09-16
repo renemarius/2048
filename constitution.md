@@ -176,12 +176,13 @@ stem→word→conjugated-word chain instead.
 
 ### v1 — Core Loop (target: 1 week)
 
-- [ ] `packages/core`: board state model (4×4 grid, tile types) implemented
+- [x] `packages/core`: board state model (4×4 grid, tile types) implemented
 - [x] `packages/core`: conjugation engine — regular verbs/adjectives,
       present + past polite forms, vowel harmony — with unit tests covering
       the full v1 word list (all 62 words, 75 passing tests)
-- [ ] `packages/core`: merge/move logic (slide, merge on grammatical
+- [x] `packages/core`: merge/move logic (slide, merge on grammatical
       compatibility, spawn new tile) — unit tested independent of UI
+      (161 passing tests across hangul/conjugate/vocab/board)
 - [ ] `apps/web`: board renders on Vercel, keyboard (arrows + WASD) control
       works, per `specs/ui-v1.md`
 - [ ] `apps/web`: score updates on merge (see Section 3.3); dictionary
@@ -190,7 +191,8 @@ stem→word→conjugated-word chain instead.
       and persisted, per `specs/ui-v1.md`
 - [ ] `apps/web`: minimal dictionary panel (word + meaning list, no
       search/filter) implemented, per `specs/ui-v1.md`
-- [ ] Game-over detection works (no legal moves remain)
+- [x] Game-over detection works (no legal moves remain) — implemented and
+      unit tested in `packages/core`; not yet wired into the UI
 - [ ] Played end-to-end by you, by hand, and it's actually fun / correct
 - [ ] Deployed and reachable on a Vercel URL
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  conjugate,
   conjugateBatchimFinal,
   conjugateHada,
   conjugateOpenDiphthong,
@@ -134,5 +135,14 @@ describe('conjugateOpenDiphthong (specs/vocab-v1.md Group 3)', () => {
 
   it('rejects an elision-class vowel', () => {
     expect(() => conjugateOpenDiphthong('가다', 'present')).toThrow();
+  });
+});
+
+describe('conjugate (auto-detecting dispatcher)', () => {
+  const allWords = [...group1Words, ...group2Words, ...group3Words, ...group4Words];
+
+  it.each(allWords)('%s matches its pattern-group function (present %s, past %s)', (word, present, past) => {
+    expect(conjugate(word, 'present')).toBe(present);
+    expect(conjugate(word, 'past')).toBe(past);
   });
 });
