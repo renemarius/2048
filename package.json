@@ -1,0 +1,16 @@
+{
+  "name": "2048-hangul-conjugation",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web",
+    "start": "npm run start --workspace=apps/web",
+    "test": "npm run test --workspace=packages/core",
+    "typecheck": "npm run typecheck --workspace=packages/core && npm run typecheck --workspace=apps/web"
+  }
+}

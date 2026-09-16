@@ -1,0 +1,55 @@
+/* Theme tokens per specs/ui-v1.md. Classic is the default (:root);
+   [data-theme="modern"] overrides every token for the alternate theme.
+   Adding a third theme later means adding one more override block —
+   component code should never hard-code a color. */
+
+:root {
+  --page-bg: #faf8ef;
+  --board-bg: #bbada0;
+  --cell-empty: #cdc1b4;
+
+  --tile-stem: #eee4da;
+  --tile-stem-text: #776e65;
+  --tile-ending: #f2b179;
+  --tile-ending-text: #ffffff;
+  --tile-word-present: #f59563;
+  --tile-word-present-text: #ffffff;
+  --tile-word-past: #e2543a;
+  --tile-word-past-text: #ffffff;
+
+  --ui-text: #776e65;
+}
+
+[data-theme='modern'] {
+  --page-bg: #f7f5f1;
+  --board-bg: #e8e4dc;
+  --cell-empty: #dcd7cc;
+
+  --tile-stem: #dcd7cc;
+  --tile-stem-text: #2b2b2b;
+  --tile-ending: #b33a3a;
+  --tile-ending-text: #ffffff;
+  --tile-word-present: #a9c4b8;
+  --tile-word-present-text: #2b2b2b;
+  --tile-word-past: #7a9e8e;
+  --tile-word-past-text: #ffffff;
+
+  --ui-text: #2b2b2b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--page-bg);
+  color: var(--ui-text);
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
