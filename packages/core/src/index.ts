@@ -3,3 +3,4 @@ export * from './conjugate';
 export * from './types';
 export * from './vocab';
 export * from './board';
+export * from './pool';

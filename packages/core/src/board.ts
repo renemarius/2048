@@ -208,6 +208,25 @@ export function createInitialBoard(vocab: readonly VocabEntry[]): Board {
   return board;
 }
 
+/**
+ * Removes every tile belonging to any of the given (now-retired) words —
+ * stem or word-stage tiles, including stray duplicates — freeing their
+ * cells. Used when the active pool (see pool.ts) retires a completed
+ * word, so no dead tiles of it linger on the board.
+ */
+export function clearCompletedTiles(board: Board, completedWords: readonly string[]): Board {
+  if (completedWords.length === 0) return board;
+  const words = new Set(completedWords);
+  return board.map((row) =>
+    row.map((cell) => {
+      if (cell && cell.kind !== 'ending' && words.has(cell.word)) {
+        return null;
+      }
+      return cell;
+    }),
+  );
+}
+
 /** No empty cell remains, and no adjacent pair anywhere can merge. */
 export function isGameOver(board: Board): boolean {
   for (let r = 0; r < BOARD_SIZE; r += 1) {

@@ -88,12 +88,29 @@ those remain excluded. Locked v1 scope:
   `specs/vocab-v1.md` for the excluded-word examples that seed the v2
   vocab backlog).
 
-### 3.2 Board mechanics — OPEN, recommended default
+### 3.2 Board mechanics — DECIDED
 
-- **Spawn:** after each move, one new tile spawns in a random empty cell.
-  It is a stem tile with probability weighted toward words not yet fully
-  conjugated in this session, or an ending tile compatible with at least
-  one stem currently on the board.
+- **Active word pool:** only 4 words are "in rotation" at any time (not
+  the full 62-word vocabulary) — stems only spawn from this pool. A
+  smaller pool means the same few words recur often enough to actually
+  learn them; the original "spawn from all 62 words at once" design made
+  the board feel chaotic and made scoring hard, since a useful stem/ending
+  pairing was rare against 62 competing possibilities. Ending tiles stay
+  generic (present/past) and work with whatever stem they land near,
+  independent of the pool.
+- **On word completion** (a pool word reaches its past/final stage):
+  the word is retired from the pool and a replacement is drawn from the
+  remaining not-yet-completed vocabulary; every tile belonging to the
+  completed word on the board — its stem, present-stage, and any stray
+  duplicates, not just the one that just merged — is cleared, freeing
+  space; the replacement word's stem is placed onto the board. The
+  completed tile stays fully visible for ~1.2s so the player actually
+  reads what they conjugated, then fades out over ~0.3s before being
+  cleared (see `packages/core/src/pool.ts` and `apps/web/app/game.tsx`).
+- **Spawn:** after each move, one new tile spawns in a random empty cell —
+  a stem tile drawn from the current active pool, or a generic ending
+  tile (weighted toward present, since past endings are only useful once
+  a present-stage word tile already exists).
 - **Game over:** board full and no adjacent stem/ending or word/ending pair
   is grammatically compatible (no legal merge remains) — direct analogue
   of 2048's loss condition.
@@ -183,20 +200,26 @@ stem→word→conjugated-word chain instead.
 - [x] `packages/core`: merge/move logic (slide, merge on grammatical
       compatibility, spawn new tile) — unit tested independent of UI
       (161 passing tests across hangul/conjugate/vocab/board)
+- [x] `packages/core`: active word pool (Section 3.2) — spawn restricted
+      to the pool, clear-and-replace on word completion — implemented and
+      unit tested (`pool.ts`, `clearCompletedTiles`; 171 tests total)
 - [x] `apps/web`: board renders, keyboard (arrows + WASD) control works,
       per `specs/ui-v1.md` — verified via local dev/build; not yet
       deployed to Vercel (see the separate deploy checklist item below)
 - [x] `apps/web`: session score updates on merge (see Section 3.3), best
-      score and board state persist across reload via `localStorage`
+      score, board state, and the active pool all persist across reload
+      via `localStorage`
 - [ ] `apps/web`: dictionary persists new words to `localStorage`
       (deferred to its own feature — see Open Decisions Log)
 - [x] `apps/web`: theme toggle (Classic / Modern ink & paper) implemented
       and persisted, per `specs/ui-v1.md`
 - [ ] `apps/web`: minimal dictionary panel (word + meaning list, no
       search/filter) implemented, per `specs/ui-v1.md`
-- [x] Game-over detection works (no legal moves remain) — implemented and
-      unit tested in `packages/core`; not yet wired into the UI
+- [x] Game-over detection works (no legal moves remain) — implemented,
+      unit tested, and wired into the UI (game-over modal + restart)
 - [ ] Played end-to-end by you, by hand, and it's actually fun / correct
+      — confirmed for the base gameplay loop; the active-pool rework
+      (this session) still needs your hands-on pass before this checks off
 - [ ] Deployed and reachable on a Vercel URL
 
 ### v2 — Educational depth (future)
@@ -222,7 +245,6 @@ Later versions (v4+) to be defined once v3 ships.
 Track anything still unresolved here as it comes up, so it doesn't get lost
 between sessions:
 
-- Section 3.2 spawn weighting and game-over edge cases — tune during build
 - **Dictionary persistence feature (next up):** the permanent word
   dictionary, the +50 one-time bonus, the "new word" toast, and the
   dictionary panel UI (`specs/ui-v1.md`'s tablet/paper skins) are all

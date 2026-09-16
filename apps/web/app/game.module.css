@@ -123,6 +123,17 @@
   }
 }
 
+/* Applied once a completed word's hold time is up — fades the tile out
+   in place before it's actually removed from the board (see game.tsx's
+   FADE_DURATION_MS, which must match this transition's duration). */
+.fading {
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity 300ms ease-in,
+    transform 300ms ease-in;
+}
+
 .stem {
   background: var(--tile-stem);
   color: var(--tile-stem-text);

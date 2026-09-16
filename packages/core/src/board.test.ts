@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BOARD_SIZE,
   attemptMerge,
+  clearCompletedTiles,
   createEmptyBoard,
   createInitialBoard,
   isGameOver,
@@ -248,6 +249,33 @@ describe('isGameOver', () => {
     board[0][0] = stemTile('가다');
     board[0][1] = endingTile('present');
     expect(isGameOver(board)).toBe(false);
+  });
+});
+
+describe('clearCompletedTiles', () => {
+  it('removes every tile belonging to a completed word, including stray duplicates and any stage', () => {
+    const board = emptyBoardWith([
+      [0, 0, wordTile('먹다', 'past', '먹었어요')],
+      [1, 1, stemTile('먹다')],
+      [2, 2, wordTile('먹다', 'present', '먹어요')],
+      [3, 3, stemTile('가다')],
+    ]);
+    const result = clearCompletedTiles(board, ['먹다']);
+    expect(result[0][0]).toBeNull();
+    expect(result[1][1]).toBeNull();
+    expect(result[2][2]).toBeNull();
+    expect(result[3][3]).toMatchObject({ kind: 'stem', word: '가다' });
+  });
+
+  it('leaves ending tiles alone regardless of word matching', () => {
+    const board = emptyBoardWith([[0, 0, endingTile('present')]]);
+    const result = clearCompletedTiles(board, ['먹다']);
+    expect(result[0][0]).toMatchObject({ kind: 'ending' });
+  });
+
+  it('is a no-op when no words are completed', () => {
+    const board = emptyBoardWith([[0, 0, stemTile('먹다')]]);
+    expect(clearCompletedTiles(board, [])).toBe(board);
   });
 });
 
