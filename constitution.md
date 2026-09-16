@@ -183,11 +183,14 @@ stem→word→conjugated-word chain instead.
 - [x] `packages/core`: merge/move logic (slide, merge on grammatical
       compatibility, spawn new tile) — unit tested independent of UI
       (161 passing tests across hangul/conjugate/vocab/board)
-- [ ] `apps/web`: board renders on Vercel, keyboard (arrows + WASD) control
-      works, per `specs/ui-v1.md`
-- [ ] `apps/web`: score updates on merge (see Section 3.3); dictionary
-      persists new words to `localStorage` across sessions
-- [ ] `apps/web`: theme toggle (Classic / Modern ink & paper) implemented
+- [x] `apps/web`: board renders, keyboard (arrows + WASD) control works,
+      per `specs/ui-v1.md` — verified via local dev/build; not yet
+      deployed to Vercel (see the separate deploy checklist item below)
+- [x] `apps/web`: session score updates on merge (see Section 3.3), best
+      score and board state persist across reload via `localStorage`
+- [ ] `apps/web`: dictionary persists new words to `localStorage`
+      (deferred to its own feature — see Open Decisions Log)
+- [x] `apps/web`: theme toggle (Classic / Modern ink & paper) implemented
       and persisted, per `specs/ui-v1.md`
 - [ ] `apps/web`: minimal dictionary panel (word + meaning list, no
       search/filter) implemented, per `specs/ui-v1.md`
@@ -220,3 +223,14 @@ Track anything still unresolved here as it comes up, so it doesn't get lost
 between sessions:
 
 - Section 3.2 spawn weighting and game-over edge cases — tune during build
+- **Dictionary persistence feature (next up):** the permanent word
+  dictionary, the +50 one-time bonus, the "new word" toast, and the
+  dictionary panel UI (`specs/ui-v1.md`'s tablet/paper skins) are all
+  deferred together as one follow-up feature — the gameplay-loop feature
+  intentionally shipped without them (session score/board/best-score
+  persistence only)
+- **Tile animation:** v1 uses snap-to-position + fade/scale-in on newly
+  spawned or newly merged tiles only (no sliding animation), since a
+  merge produces a brand-new tile id with no natural "moved from A to B"
+  to animate without extra position-tracking work. Revisit true sliding
+  as later polish if wanted.

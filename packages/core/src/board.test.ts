@@ -8,7 +8,7 @@ import {
   move,
   spawnTile,
 } from './board';
-import type { Board, EndingTile, StemTile, Tile, WordTile } from './types';
+import type { Board, Direction, EndingTile, StemTile, Tile, WordTile } from './types';
 import { VOCAB } from './vocab';
 
 let testIdCounter = 0;
@@ -248,5 +248,44 @@ describe('isGameOver', () => {
     board[0][0] = stemTile('가다');
     board[0][1] = endingTile('present');
     expect(isGameOver(board)).toBe(false);
+  });
+});
+
+describe('full playthrough simulation', () => {
+  // Exercises the exact move -> spawnTile -> isGameOver loop apps/web
+  // drives from the keyboard, over many random games, as a stand-in for
+  // manual browser testing (no browser available in this environment).
+  const DIRECTIONS: Direction[] = ['up', 'down', 'left', 'right'];
+
+  it('plays many full random games without throwing and keeps state well-formed throughout', () => {
+    for (let game = 0; game < 20; game += 1) {
+      let board = createInitialBoard(VOCAB);
+      let score = 0;
+      let steps = 0;
+
+      while (!isGameOver(board) && steps < 1000) {
+        const direction = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
+        const result = move(board, direction);
+
+        expect(result.board).toHaveLength(BOARD_SIZE);
+        result.board.forEach((row) => expect(row).toHaveLength(BOARD_SIZE));
+        expect(result.scoreDelta).toBeGreaterThanOrEqual(0);
+        expect(Number.isInteger(result.scoreDelta)).toBe(true);
+
+        if (result.moved) {
+          board = spawnTile(result.board, VOCAB);
+          score += result.scoreDelta;
+        } else {
+          board = result.board;
+        }
+        steps += 1;
+      }
+
+      expect(score).toBeGreaterThanOrEqual(0);
+      // Every game must actually terminate — if this fires, either
+      // isGameOver under-detects a stuck board or move() has a bug that
+      // loops forever without progress.
+      expect(steps).toBeLessThan(1000);
+    }
   });
 });
