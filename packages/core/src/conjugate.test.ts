@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { conjugateBatchimFinal, conjugateHada } from './conjugate';
+import {
+  conjugateBatchimFinal,
+  conjugateHada,
+  conjugateOpenDiphthong,
+  conjugateOpenElision,
+} from './conjugate';
 
 // Every Group 1 / Group 4 word from specs/vocab-v1.md, present + past,
 // exercised exhaustively — this is the correctness-critical part of the
@@ -73,5 +78,61 @@ describe('conjugateHada (specs/vocab-v1.md Group 4)', () => {
 
   it('rejects a non-하다 word', () => {
     expect(() => conjugateHada('먹다', 'present')).toThrow();
+  });
+});
+
+const group2Words: Array<[word: string, present: string, past: string]> = [
+  ['가다', '가요', '갔어요'],
+  ['자다', '자요', '잤어요'],
+  ['사다', '사요', '샀어요'],
+  ['타다', '타요', '탔어요'],
+  ['만나다', '만나요', '만났어요'],
+  ['서다', '서요', '섰어요'],
+  ['건너다', '건너요', '건넜어요'],
+  ['켜다', '켜요', '켰어요'],
+  ['보내다', '보내요', '보냈어요'],
+  ['지내다', '지내요', '지냈어요'],
+  ['끝나다', '끝나요', '끝났어요'],
+  ['일어나다', '일어나요', '일어났어요'],
+];
+
+describe('conjugateOpenElision (specs/vocab-v1.md Group 2)', () => {
+  it.each(group2Words)('%s -> present %s, past %s', (word, present, past) => {
+    expect(conjugateOpenElision(word, 'present')).toBe(present);
+    expect(conjugateOpenElision(word, 'past')).toBe(past);
+  });
+
+  it('rejects a batchim-final stem', () => {
+    expect(() => conjugateOpenElision('먹다', 'present')).toThrow();
+  });
+
+  it('rejects a diphthong-class vowel', () => {
+    expect(() => conjugateOpenElision('오다', 'present')).toThrow();
+  });
+});
+
+const group3Words: Array<[word: string, present: string, past: string]> = [
+  ['오다', '와요', '왔어요'],
+  ['보다', '봐요', '봤어요'],
+  ['배우다', '배워요', '배웠어요'],
+  ['마시다', '마셔요', '마셨어요'],
+  ['다니다', '다녀요', '다녔어요'],
+  ['기다리다', '기다려요', '기다렸어요'],
+  ['주다', '줘요', '줬어요'],
+  ['나오다', '나와요', '나왔어요'],
+];
+
+describe('conjugateOpenDiphthong (specs/vocab-v1.md Group 3)', () => {
+  it.each(group3Words)('%s -> present %s, past %s', (word, present, past) => {
+    expect(conjugateOpenDiphthong(word, 'present')).toBe(present);
+    expect(conjugateOpenDiphthong(word, 'past')).toBe(past);
+  });
+
+  it('rejects a batchim-final stem', () => {
+    expect(() => conjugateOpenDiphthong('먹다', 'present')).toThrow();
+  });
+
+  it('rejects an elision-class vowel', () => {
+    expect(() => conjugateOpenDiphthong('가다', 'present')).toThrow();
   });
 });

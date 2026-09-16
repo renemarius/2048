@@ -177,9 +177,9 @@ stem→word→conjugated-word chain instead.
 ### v1 — Core Loop (target: 1 week)
 
 - [ ] `packages/core`: board state model (4×4 grid, tile types) implemented
-- [ ] `packages/core`: conjugation engine — regular verbs/adjectives,
+- [x] `packages/core`: conjugation engine — regular verbs/adjectives,
       present + past polite forms, vowel harmony — with unit tests covering
-      the full v1 word list
+      the full v1 word list (all 62 words, 75 passing tests)
 - [ ] `packages/core`: merge/move logic (slide, merge on grammatical
       compatibility, spawn new tile) — unit tested independent of UI
 - [ ] `apps/web`: board renders on Vercel, keyboard (arrows + WASD) control
