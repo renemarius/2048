@@ -36,7 +36,8 @@ sub-rules of vowel harmony:
   기쁘다(happy), 고프다(hungry)
 
 These are all common, useful A1–A2 words — this is the natural v2 backlog,
-not a "these words don't matter" list.
+not a "these words don't matter" list. See `specs/vocab-v2.md` for how
+this list is picked up as v2's Level 2 content.
 
 ---
 

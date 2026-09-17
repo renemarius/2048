@@ -320,11 +320,31 @@ playtest/deploy checklist items first. See Open Decisions Log below.
 
 ### v2 — Educational depth (future)
 
-- [ ] Broaden vocab list / add irregular conjugation classes
+- [ ] **Rules panel** — onboarding panel/modal explaining the objective
+      and translating the `현재`/`과거` tile labels (present/past), since a
+      new player has no other way to learn what those mean (see
+      `specs/ui-v2.md`)
+- [ ] **Level 2 vocab: irregular conjugation classes** — ㄷ/ㅂ/ㅅ/르/ㅎ and
+      ㅡ-contraction, the words excluded from v1 (`specs/vocab-v1.md`'s
+      excluded list), added as a distinct Level 2 unlocked after Level 1
+      (v1's 62-word regular set) — replaces the old vague "explicit
+      levels" item with a concrete two-level structure (see
+      `specs/vocab-v2.md`)
 - [ ] Additional tenses/endings (future tense, connective forms, etc.)
-- [ ] Explicit levels or difficulty progression
-- [ ] Enhanced dictionary UI (search/filter/stats on top of v1's minimal
-      panel)
+- [ ] **Hard mode** — a Normal-mode difficulty modifier built around
+      smaller/faster board pressure (see `specs/game-modes-v2.md`)
+- [ ] **Concentration mode** — a separate memory-match game mode (flip
+      tiles, match a Korean word to its English meaning), drawing on
+      words already in the player's dictionary; has its own scoreboard
+      (see `specs/game-modes-v2.md`)
+- [ ] **Per-mode scoring** — best score now tracked separately for
+      Normal, Hard, and Concentration instead of one shared best score
+      (see `specs/game-modes-v2.md`)
+- [ ] Enhanced dictionary UI — search, filter, alphabetical sort, and a
+      bookmark/star tab for saved words (see `specs/ui-v2.md`)
+- [ ] Dictionary panel color fix (Classic theme) — restyle to fit the
+      existing Classic palette instead of clashing with it (see
+      `specs/ui-v2.md`)
 
 ### v3 — Personalization & polish (future)
 
@@ -341,6 +361,38 @@ Later versions (v4+) to be defined once v3 ships.
 Track anything still unresolved here as it comes up, so it doesn't get lost
 between sessions:
 
+- **v2 feature set (this session):** brainstormed and locked v2 scope
+  beyond the pre-existing backlog bullets. This entry intentionally
+  stays high-level — detail lives in the three new specs it links, per
+  this file's own convention of pushing implementation-level detail out
+  of the constitution.
+  - **Onboarding rules panel** — DECIDED. See `specs/ui-v2.md`.
+  - **Vocab expansion** — DECIDED as Level 2 = the irregular classes
+    already catalogued in `specs/vocab-v1.md`'s excluded list (34 words
+    across ㄷ/ㅂ/ㅅ/르/ㅎ/ㅡ-contraction), not an open-ended word-count
+    increase. See `specs/vocab-v2.md`.
+  - **Difficulty:** considered several ideas for a harder mode (faster
+    board pressure, distractor ambiguity, a timer/decay bonus, disabling
+    the spaced-review safety net, a wider active pool) and picked
+    **smaller/faster board pressure** as the one Hard mode for v2. Exact
+    tuning is still OPEN. See `specs/game-modes-v2.md`.
+  - **New mode:** a **click-and-match mode** (click two adjacent
+    compatible tiles instead of arrow-sliding) was proposed, then
+    explicitly dropped — the user decided one hard-mode variant plus one
+    new mode is enough scope for v2.
+  - **Concentration mode** — DECIDED as that one new mode: a classic
+    memory/match minigame, Korean word ↔ English meaning, drawing only
+    from words already in the player's dictionary (not the full vocab
+    list), so it reinforces retention rather than testing unseen words.
+    Standalone mode, its own scoreboard. See `specs/game-modes-v2.md`.
+  - **Scoring** — DECIDED: three separate best-score tracks going
+    forward (Normal / Hard / Concentration) replacing v1's single shared
+    best score. Section 3.3/4 will need a v2 addendum once implemented.
+  - **Dictionary UI** — DECIDED: search, filter, alphabetical sort, and
+    a bookmark/star tab, on top of the v1.5 panel. See `specs/ui-v2.md`.
+  - **Visual fix** — Classic theme's dictionary panel currently clashes
+    with its own palette; DECIDED to restyle it to match rather than
+    leave it as a known visual bug. See `specs/ui-v2.md`.
 - **Dictionary persistence feature:** resolved — implemented as the
   permanent word dictionary, +50 one-time bonus, "new word" toast, and
   the tablet/paper-skinned dictionary panel (see the v1 checklist above).

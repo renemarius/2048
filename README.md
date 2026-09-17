@@ -9,7 +9,7 @@ ending tiles (`현재`/`과거`) to produce conjugated word tiles (`가요` →
 `갔어요`), chaining the way 2/4/8 chains in classic 2048. See
 [`constitution.md`](constitution.md) for the full design, scope, and
 versioned checklist, and [`specs/`](specs) for detailed sub-specs
-(vocabulary list, UI).
+(vocabulary, UI, game modes).
 
 ## Project structure
 
