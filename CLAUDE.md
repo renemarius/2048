@@ -30,8 +30,10 @@ to work here, not *what* to build.
 
 - This folder is its own git repo (initialized here directly — `git
   rev-parse --show-toplevel` resolves to this folder, not the user's home
-  directory). `git add -A` / `git commit` scoped to this repo are safe;
-  no remote is configured yet.
+  directory). `git add -A` / `git commit` scoped to this repo are safe.
+  Remote: `origin` → `github.com/renemarius/2048` (`main` branch). Pushes
+  are a user action — confirm before pushing, don't push on your own
+  initiative just because a commit was made.
 - **Commit after each feature is built and verified working** — not on
   any other cadence (not every small edit, not batched at session end,
   not only when asked). A completed, checked-off checklist item is a
