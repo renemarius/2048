@@ -90,12 +90,21 @@ forward from what was originally a v2-only "browse UI" item) — without
 somewhere to see meanings, a Korean-learning game with no gloss anywhere
 would defeat its own purpose. Scope split:
 
-- **v1 (this spec):** a simple toggleable panel/modal listing every
+- **v1 (original):** a simple toggleable panel/modal listing every
   `(Korean word, English meaning)` pair in the permanent dictionary so
-  far, in a fixed order (e.g. order learned). No search, filter, or stats.
-- **v2 (constitution roadmap):** enhance that same panel with
-  search/filter and any learning stats, on top of the v1 version — not a
-  rebuild.
+  far, in a fixed order (order learned). No search, filter, or stats.
+- **v1.5 (this session — see constitution.md Open Decisions Log):** the
+  panel is now a **docked, non-blocking drawer** sliding in from the
+  right edge instead of a centered, blocking modal — the user wants it
+  usable *while playing*, not just as a pause-and-look popup. Gameplay
+  (including keyboard moves) keeps working while it's open; Escape or the
+  close button dismiss it. Each row also gained: an **example sentence +
+  translation** (the word's own present-polite form, so it reinforces the
+  exact conjugation just taught), a **mastery count** (`×N`, times
+  conjugated to past stage ever), and a **speaker button** (Web Speech
+  API, `ko-KR`) for pronunciation.
+- **v2 (constitution roadmap):** search/filter on top of the v1.5
+  version — not a rebuild.
 
 ## Dictionary Panel Visual Treatment — DECIDED
 
@@ -193,10 +202,12 @@ Section 3):
   does not touch the permanent dictionary or best score
 - **Theme toggle** — switches Classic ⇄ Modern ink & paper, persisted in
   `localStorage`
-- **Minimal dictionary panel** — toggle open/closed; lists learned words +
-  meanings (see above), skinned per active theme as "digital tablet"
-  (Classic) or "notebook paper" (Modern ink & paper) — see Dictionary
-  Panel Visual Treatment above
+- **Dictionary panel** — docked drawer, toggled open/closed from the
+  right edge, non-blocking (gameplay continues while open — v1.5); lists
+  learned words + meanings + example sentence/translation + mastery count
+  + pronunciation button (see above), skinned per active theme as
+  "digital tablet" (Classic) or "notebook paper" (Modern ink & paper) —
+  see Dictionary Panel Visual Treatment above
 - **"New word" toast** — brief on-screen notification when a base word
   hits its past-stage form for the first time ever (the +50 bonus moment)
   — this is the single most important feedback moment in the game and

@@ -18,4 +18,22 @@ describe('VOCAB', () => {
       expect(() => conjugate(word, 'past')).not.toThrow();
     }
   });
+
+  it('every entry has a non-empty example sentence and translation', () => {
+    for (const entry of VOCAB) {
+      expect(entry.exampleSentence.length).toBeGreaterThan(0);
+      expect(entry.exampleTranslation.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every example sentence actually contains the word's real present-tense form", () => {
+    // Guards against hand-written example sentences drifting from what
+    // conjugate() actually produces (e.g. a typo'd surface form) — the
+    // whole point of the sentence is to reinforce the exact conjugation
+    // the game just taught.
+    for (const entry of VOCAB) {
+      const presentForm = conjugate(entry.word, 'present');
+      expect(entry.exampleSentence).toContain(presentForm);
+    }
+  });
 });

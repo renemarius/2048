@@ -66,3 +66,28 @@ export function advancePool(
 
   return { pool: { active, completed }, added };
 }
+
+/**
+ * Spaced-review resurfacing (constitution.md Section 3.2 / Open Decisions
+ * Log): the active pool alone means a word never appears again once
+ * completed — great for first-time learning, bad for memorization. With
+ * probability `reviewChance`, offer one already-in-the-dictionary word
+ * (excluding whatever is currently active, since those already get their
+ * own priority via analyzeBoardNeeds) as an extra stem-spawn candidate.
+ * Returns null when the roll fails or there's no eligible word — the
+ * caller then spawns from the active pool alone, unchanged.
+ */
+export function pickReviewWord(
+  learnedWords: readonly string[],
+  activePool: readonly string[],
+  reviewChance: number,
+  random: () => number = Math.random,
+): string | null {
+  if (random() >= reviewChance) return null;
+
+  const active = new Set(activePool);
+  const candidates = learnedWords.filter((word) => !active.has(word));
+  if (candidates.length === 0) return null;
+
+  return candidates[Math.floor(random() * candidates.length)];
+}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { Board, Direction, Pool, Tile as CoreTile, VocabEntry } from 'core';
+import type { Board, DictionaryEntry, Direction, Pool, Tile as CoreTile, VocabEntry } from 'core';
 import {
   BOARD_SIZE,
   VOCAB,
@@ -13,6 +13,7 @@ import {
   createPool,
   isGameOver,
   move,
+  pickReviewWord,
   spawnTile,
   updateDictionary,
   NEW_WORD_BONUS,
@@ -24,6 +25,13 @@ import styles from './game.module.css';
 // than drawing from the full 62-word vocabulary), so the same few words
 // recur often enough to actually learn them — constitution.md Section 8.
 const POOL_SIZE = 4;
+
+// Spaced-review resurfacing (constitution.md Section 3.2): on each spawn,
+// this is the chance an already-learned dictionary word gets offered as
+// an extra stem candidate alongside the active pool, so memorization
+// keeps going instead of a word disappearing forever the moment it's
+// first learned. See pool.ts's pickReviewWord.
+const REVIEW_CHANCE = 0.4;
 
 // Completing a word: the finished tile stays fully visible for
 // FADE_HOLD_MS so the player actually reads what they conjugated, then
@@ -112,28 +120,61 @@ function persistBestScore(value: number): void {
   }
 }
 
-function loadDictionary(): string[] {
+function loadDictionary(): DictionaryEntry[] {
   try {
     const raw = window.localStorage.getItem(DICTIONARY_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || !parsed.every((word) => typeof word === 'string')) return [];
-    return parsed;
+    if (!Array.isArray(parsed)) return [];
+    // Back-compat: sessions saved before mastery counts existed stored
+    // plain `string[]` — treat each as having been completed once.
+    if (parsed.every((entry) => typeof entry === 'string')) {
+      return parsed.map((word) => ({ word, count: 1 }));
+    }
+    if (
+      parsed.every(
+        (entry) =>
+          entry && typeof entry.word === 'string' && typeof entry.count === 'number',
+      )
+    ) {
+      return parsed as DictionaryEntry[];
+    }
+    return [];
   } catch {
     return [];
   }
 }
 
-function persistDictionary(words: readonly string[]): void {
+function persistDictionary(entries: readonly DictionaryEntry[]): void {
   try {
-    window.localStorage.setItem(DICTIONARY_KEY, JSON.stringify(words));
+    window.localStorage.setItem(DICTIONARY_KEY, JSON.stringify(entries));
   } catch {
     // see persistSession
   }
 }
 
+function vocabEntryFor(word: string): VocabEntry | undefined {
+  return VOCAB.find((entry) => entry.word === word);
+}
+
 function meaningFor(word: string): string {
-  return VOCAB.find((entry) => entry.word === word)?.meaning ?? '';
+  return vocabEntryFor(word)?.meaning ?? '';
+}
+
+// Web Speech API pronunciation — client-side, no backend/API key, so it
+// fits the same "no external service" principle as the rest of v1
+// (constitution.md Principle 2/4). No-ops quietly if unsupported.
+function speak(text: string): void {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ko-KR';
+    window.speechSynthesis.speak(utterance);
+  } catch {
+    // Speech synthesis unavailable/blocked — silently skip, it's a nice-
+    // to-have, not core functionality.
+  }
 }
 
 function vocabForWords(words: readonly string[]): VocabEntry[] {
@@ -189,7 +230,7 @@ export function Game() {
   const [gameOver, setGameOver] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [clearingWords, setClearingWords] = useState<Set<string>>(new Set());
-  const [dictionary, setDictionary] = useState<string[]>([]);
+  const [dictionary, setDictionary] = useState<DictionaryEntry[]>([]);
   const [dictionaryOpen, setDictionaryOpen] = useState(false);
   const [newWordToast, setNewWordToast] = useState<string[] | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
@@ -284,7 +325,13 @@ export function Game() {
       const result = move(board, direction);
       if (!result.moved) return;
 
-      const nextBoard = spawnTile(result.board, vocabForWords(pool.active));
+      const reviewWord = pickReviewWord(
+        dictionary.map((entry) => entry.word),
+        pool.active,
+        REVIEW_CHANCE,
+      );
+      const spawnWords = reviewWord ? [...pool.active, reviewWord] : pool.active;
+      const nextBoard = spawnTile(result.board, vocabForWords(spawnWords));
       const dictUpdate = updateDictionary(dictionary, result.completedWords);
       const nextScore = score + result.scoreDelta + dictUpdate.bonus;
 
@@ -292,9 +339,12 @@ export function Game() {
       setScore(nextScore);
       persistSession({ board: nextBoard, score: nextScore, pool });
 
-      if (dictUpdate.newWords.length > 0) {
+      if (result.completedWords.length > 0) {
         setDictionary(dictUpdate.dictionary);
         persistDictionary(dictUpdate.dictionary);
+      }
+
+      if (dictUpdate.newWords.length > 0) {
         setNewWordToast(dictUpdate.newWords);
         if (toastTimeoutRef.current !== null) window.clearTimeout(toastTimeoutRef.current);
         toastTimeoutRef.current = window.setTimeout(() => {
@@ -321,13 +371,26 @@ export function Game() {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const direction = KEY_TO_DIRECTION[event.key];
-      if (!direction) return;
-      event.preventDefault();
-      handleMove(direction);
+      if (direction) {
+        event.preventDefault();
+        handleMove(direction);
+      }
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleMove]);
+
+  // The dictionary drawer is docked, not a blocking modal (constitution.md
+  // Open Decisions Log) — gameplay keeps working while it's open. Escape
+  // still closes it, matching standard drawer/panel conventions.
+  useEffect(() => {
+    if (!dictionaryOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setDictionaryOpen(false);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [dictionaryOpen]);
 
   function handleRestart() {
     const session = newSession();
@@ -360,7 +423,12 @@ export function Game() {
           </div>
         </div>
         <div className={styles.controlButtons}>
-          <button type="button" className={styles.button} onClick={() => setDictionaryOpen(true)}>
+          <button
+            type="button"
+            className={styles.button}
+            onClick={() => setDictionaryOpen((open) => !open)}
+            aria-expanded={dictionaryOpen}
+          >
             Dictionary ({dictionary.length})
           </button>
           <button type="button" className={styles.button} onClick={handleRestart}>
@@ -374,6 +442,14 @@ export function Game() {
           {newWordToast.map((word) => (
             <div key={word} className={styles.toastLine}>
               New word: <strong>{word}</strong> ({meaningFor(word)}) +{NEW_WORD_BONUS}
+              <button
+                type="button"
+                className={styles.speakButton}
+                onClick={() => speak(word)}
+                aria-label={`Pronounce ${word}`}
+              >
+                🔊
+              </button>
             </div>
           ))}
         </div>
@@ -417,12 +493,12 @@ export function Game() {
         </div>
       )}
 
-      {dictionaryOpen && (
-        <div className={styles.modalOverlay} onClick={() => setDictionaryOpen(false)}>
-          <div
-            className={styles.dictionaryPanel}
-            onClick={(event) => event.stopPropagation()}
-          >
+      {hydrated && (
+        <div
+          className={`${styles.dictionaryDrawer} ${dictionaryOpen ? styles.dictionaryDrawerOpen : ''}`}
+          aria-hidden={!dictionaryOpen}
+        >
+          <div className={styles.dictionaryPanel}>
             <div className={styles.dictionaryScreen}>
               <div className={styles.dictionaryHeader}>
                 <h2>Dictionary</h2>
@@ -431,24 +507,50 @@ export function Game() {
                   className={styles.dictionaryClose}
                   onClick={() => setDictionaryOpen(false)}
                   aria-label="Close dictionary"
+                  tabIndex={dictionaryOpen ? 0 : -1}
                 >
                   ×
                 </button>
               </div>
-              {dictionary.length === 0 ? (
-                <p className={styles.dictionaryEmpty}>
-                  No words learned yet — conjugate one to its past form to add it here.
-                </p>
-              ) : (
-                <ul className={styles.dictionaryList}>
-                  {dictionary.map((word) => (
-                    <li key={word} className={styles.dictionaryRow}>
-                      <span className={styles.dictionaryWord}>{word}</span>
-                      <span className={styles.dictionaryMeaning}>{meaningFor(word)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <div className={styles.dictionaryListWrap}>
+                {dictionary.length === 0 ? (
+                  <p className={styles.dictionaryEmpty}>
+                    No words learned yet — conjugate one to its past form to add it here.
+                  </p>
+                ) : (
+                  <ul className={styles.dictionaryList}>
+                    {dictionary.map(({ word, count }) => {
+                      const entry = vocabEntryFor(word);
+                      return (
+                        <li key={word} className={styles.dictionaryRow}>
+                          <div className={styles.dictionaryRowTop}>
+                            <span className={styles.dictionaryWord}>{word}</span>
+                            <button
+                              type="button"
+                              className={styles.speakButton}
+                              onClick={() => speak(word)}
+                              aria-label={`Pronounce ${word}`}
+                              tabIndex={dictionaryOpen ? 0 : -1}
+                            >
+                              🔊
+                            </button>
+                            <span className={styles.dictionaryMastery} title="Times conjugated to past tense">
+                              ×{count}
+                            </span>
+                            <span className={styles.dictionaryMeaning}>{entry?.meaning ?? ''}</span>
+                          </div>
+                          {entry && (
+                            <div className={styles.dictionaryExample}>
+                              <p className={styles.dictionarySentence}>{entry.exampleSentence}</p>
+                              <p className={styles.dictionaryTranslation}>{entry.exampleTranslation}</p>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
         </div>

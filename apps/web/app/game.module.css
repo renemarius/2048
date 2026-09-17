@@ -233,27 +233,53 @@
   }
 }
 
+/* Dictionary drawer — docked to the right edge, not a blocking modal
+   (constitution.md Open Decisions Log): gameplay stays visible and
+   playable while it's open. Slides in/out via transform so the board
+   never needs to resize around it. */
+.dictionaryDrawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: min(380px, 92vw);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  transform: translateX(100%);
+  transition: transform 260ms ease;
+  z-index: 15;
+  pointer-events: none;
+}
+
+.dictionaryDrawerOpen {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
 /* Dictionary panel — base styling is the Classic "digital tablet" skin
    (thick dark bezel around a lit screen); [data-theme='modern'] below
    restyles it as a physical notebook-paper sheet instead. Both skins
    consume the --dict-* tokens from globals.css, per
    specs/ui-v1.md's "Implementation note" (no parallel styling system). */
 .dictionaryPanel {
-  width: 100%;
-  max-width: 360px;
+  height: 100%;
   background: var(--dict-bezel-bg);
-  border-radius: 22px;
-  padding: 0.9rem 0.9rem 1.6rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  border-radius: 22px 0 0 22px;
+  padding: 0.9rem 0 0.9rem 0.9rem;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.35);
+  display: flex;
 }
 
 .dictionaryScreen {
   background: var(--dict-screen-bg);
   color: var(--dict-text);
-  border-radius: 12px;
+  border-radius: 12px 0 0 12px;
   padding: 1rem;
-  max-height: min(60vh, 420px);
-  overflow-y: auto;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   position: relative;
 }
 
@@ -262,6 +288,14 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.dictionaryListWrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  position: relative;
 }
 
 .dictionaryHeader h2 {
@@ -293,10 +327,7 @@
 }
 
 .dictionaryRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.5rem 0.1rem;
+  padding: 0.6rem 0.1rem;
   border-bottom: 1px solid var(--dict-divider);
   font-size: 0.85rem;
 }
@@ -305,27 +336,73 @@
   border-bottom: none;
 }
 
+.dictionaryRowTop {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 .dictionaryWord {
   font-weight: 700;
 }
 
+.dictionaryMastery {
+  font-size: 0.75rem;
+  opacity: 0.65;
+}
+
 .dictionaryMeaning {
   color: var(--dict-meaning-text);
+  margin-left: auto;
   text-align: right;
+}
+
+.dictionaryExample {
+  margin-top: 0.3rem;
+}
+
+.dictionarySentence {
+  margin: 0;
+}
+
+.dictionaryTranslation {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.speakButton {
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  opacity: 0.85;
+}
+
+.speakButton:hover {
+  opacity: 1;
 }
 
 /* Modern ink & paper: literal notebook-paper sheet instead of a tablet
    bezel — ruled lines behind each row, a red margin line near the left
    edge (specs/ui-v1.md "Dictionary Panel Visual Treatment"). */
 :global(html[data-theme='modern']) .dictionaryPanel {
-  border-radius: 4px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 4px 0 0 4px;
+  box-shadow: -8px 0 20px rgba(0, 0, 0, 0.15);
   padding: 0;
 }
 
 :global(html[data-theme='modern']) .dictionaryScreen {
-  border-radius: 4px;
+  border-radius: 4px 0 0 4px;
   padding: 1rem 1rem 1rem 1.75rem;
+}
+
+:global(html[data-theme='modern']) .dictionaryListWrap {
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
@@ -336,12 +413,12 @@
   background-position: 0 2.4rem;
 }
 
-:global(html[data-theme='modern']) .dictionaryScreen::before {
+:global(html[data-theme='modern']) .dictionaryListWrap::before {
   content: '';
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 1rem;
+  left: -0.75rem;
   width: 2px;
   background: var(--dict-margin);
 }

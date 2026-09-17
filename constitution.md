@@ -134,6 +134,18 @@ those remain excluded. Locked v1 scope:
   pool ran out of stems to pair them with, and duplicate stems for a
   word already in play were common, both of which visibly clogged the
   board in practice.
+- **Spaced-review resurfacing (added this session, see Open Decisions
+  Log):** the active pool alone means a word never appears on the board
+  again once completed — good for first-time learning, bad for actual
+  memorization, which is the whole point for the target A1–A2 audience.
+  On every spawn, with `REVIEW_CHANCE` probability (0.4, tunable —
+  `apps/web/app/game.tsx`) one word already in the permanent dictionary
+  (excluding whatever's currently in the active pool) is offered as an
+  extra stem-spawn candidate via `pickReviewWord` (`packages/core/src/pool.ts`).
+  A review word completing again doesn't retire/replace anything (it was
+  never in `pool.active`) and doesn't re-award the +50 bonus, but it does
+  increment that word's mastery count (Section 3.3) and still scores the
+  normal merge points.
 - **Game over:** board full and no adjacent stem/ending or word/ending pair
   is grammatically compatible (no legal merge remains) — direct analogue
   of 2048's loss condition.
@@ -162,6 +174,19 @@ stem→word→conjugated-word chain instead.
   v1 stage at least once, across all sessions ever played. The first time
   a given base word reaches that stage, it's added to the dictionary and
   the +50 bonus fires — this is the "new word overall" hook you described.
+  Each dictionary entry also tracks a **mastery count** — how many times
+  that word has ever reached past-stage, including from spaced-review
+  resurfacing (Section 3.2) in later sessions — shown in the dictionary
+  panel so a learner can see which words they've actually drilled versus
+  only completed once (`packages/core/src/dictionary.ts`'s
+  `DictionaryEntry`/`updateDictionary`).
+- Each dictionary entry now also carries an **example sentence**
+  (`VocabEntry.exampleSentence`/`exampleTranslation`, `packages/core/src/vocab.ts`)
+  using the word's own present-polite surface form, so the panel
+  reinforces the exact conjugation the game just taught rather than
+  restating the dictionary form. `vocab.test.ts` asserts every sentence
+  actually contains that word's real `conjugate()` output, catching
+  hand-written-content typos the same way the engine's own tests do.
 - **Best score** persists in `localStorage`, separate from the dictionary,
   same as classic 2048.
 - These point values are a first-pass ratio, not a hard requirement —
@@ -256,6 +281,44 @@ stem→word→conjugated-word chain instead.
       (this session) still needs your hands-on pass before this checks off
 - [ ] Deployed and reachable on a Vercel URL
 
+### v1.5 — Learning-optimized UX (session addition, explicit jump-ahead)
+
+Added mid-session, before the last two v1 boxes above were checked off —
+an explicit user decision to prioritize audience-facing learning features
+(memorization/repetition, in-play reference material) over finishing the
+playtest/deploy checklist items first. See Open Decisions Log below.
+
+- [x] `packages/core`: spaced-review resurfacing (`pickReviewWord` in
+      `pool.ts`) — already-learned dictionary words periodically resurface
+      as board stems instead of disappearing forever once first completed;
+      unit tested (5 new tests, `pool.test.ts`)
+- [x] `packages/core`: dictionary mastery counts — `DictionaryEntry` now
+      tracks `count` (times conjugated to past stage, ever), not just
+      membership; unit tested (`dictionary.test.ts`, rewritten for the new
+      shape)
+- [x] `packages/core`: example sentence + translation per vocab word
+      (`VOCAB.exampleSentence`/`exampleTranslation`, all 62 words), unit
+      tested against the engine's own `conjugate()` output so a typo'd
+      sentence fails the suite
+- [x] `apps/web`: dictionary panel converted from a centered, blocking
+      modal to a docked right-side drawer — gameplay (including keyboard
+      moves) keeps working while it's open, per the explicit "usable while
+      playing" ask; Escape still closes it. Both theme skins (tablet /
+      notebook paper) carried over to the new geometry.
+- [x] `apps/web`: dictionary rows now show the example sentence,
+      translation, and mastery count (`×N`) alongside word + meaning
+- [x] `apps/web`: audio pronunciation via the browser's built-in
+      `SpeechSynthesis` API (`ko-KR`) — speaker button on each dictionary
+      row and on the "new word" toast; no backend/API key, silently no-ops
+      if unsupported
+- [x] Verified via `npm run test` (189 passing core tests), `npm run
+      typecheck`, `npm run build` (all clean), and a running `next dev`
+      serving the updated page with no compile errors
+- [ ] Hands-on browser pass: drawer slide animation, speaker button audio
+      actually audible, review-word resurfacing visibly happening across a
+      real play session — not yet confirmed by hand (no browser tool this
+      session, same caveat as the rest of v1's UI-facing boxes)
+
 ### v2 — Educational depth (future)
 
 - [ ] Broaden vocab list / add irregular conjugation classes
@@ -284,3 +347,23 @@ between sessions:
   the tablet/paper-skinned dictionary panel (see the v1 checklist above).
   Still needs a hands-on browser pass (toast appearance/timing, both theme
   skins) since no browser tool is available this session.
+- **Audience-focused learning UX (v1.5, this session):** the user
+  reframed priorities around the actual target audience (A1–A2 Korean
+  learners) before the last two v1 boxes (hands-on playtest, Vercel
+  deploy) were checked off — an explicit instruction to jump ahead, per
+  CLAUDE.md's spec-driven-workflow rule that otherwise defers v2+ work.
+  Three specific asks plus two of my suggestions were confirmed via
+  clarifying questions:
+  - "More repetition" meant **spaced-review resurfacing** of already-
+    learned dictionary words (not just tuning the existing 4-word active
+    pool) — resolves the ambiguity that `advancePool` previously retired
+    a completed word forever, once per session.
+  - The dictionary panel becomes a **docked, non-blocking** right-side
+    drawer (not the previous full-screen blocking modal, just moved) —
+    the user explicitly wants to reference it *while* playing.
+  - Added **audio pronunciation** (Web Speech API) and **mastery
+    counts** per dictionary entry, on top of the three originally-named
+    features (repetition, slide-out panel, example sentences). A
+    "pattern-group hint on stems" suggestion was declined for now.
+  - See the new v1.5 checklist section above for what shipped and what
+    still needs a hands-on browser pass.

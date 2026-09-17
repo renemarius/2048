@@ -4,12 +4,24 @@
 // session. Persisting the dictionary itself is a web-layer concern
 // (localStorage survives across sessions); this stays a pure function so
 // the bonus/new-word logic is unit-testable like the rest of core.
+//
+// Each entry also tracks a mastery `count` — how many times that word has
+// ever reached past-stage, across all sessions — surfaced in the
+// dictionary panel so a learner can see which words they've drilled a lot
+// vs. only once. It's the same event that (for a first-time word) awards
+// the bonus, so one update function tracks both.
 
 export const NEW_WORD_BONUS = 50;
 
+export interface DictionaryEntry {
+  word: string;
+  /** Times this word has reached past-stage, ever (>= 1). */
+  count: number;
+}
+
 export interface DictionaryUpdate {
   /** Existing dictionary plus any newly-added words, in learned order. */
-  dictionary: string[];
+  dictionary: DictionaryEntry[];
   /** Words from this update that were not already in the dictionary. */
   newWords: string[];
   /** NEW_WORD_BONUS times the number of newWords. */
@@ -19,23 +31,28 @@ export interface DictionaryUpdate {
 /**
  * completedWords are words that just reached past-stage in this move
  * (see MoveResult.completedWords in board.ts). A word already present in
- * `dictionary` earns no further bonus on later completions.
+ * `dictionary` earns no further bonus on later completions, but its
+ * mastery count still increments.
  */
 export function updateDictionary(
-  dictionary: readonly string[],
+  dictionary: readonly DictionaryEntry[],
   completedWords: readonly string[],
 ): DictionaryUpdate {
-  const seen = new Set(dictionary);
+  const counts = new Map(dictionary.map((entry) => [entry.word, entry.count]));
+  const order = dictionary.map((entry) => entry.word);
   const newWords: string[] = [];
 
   for (const word of completedWords) {
-    if (seen.has(word)) continue;
-    seen.add(word);
-    newWords.push(word);
+    if (!counts.has(word)) {
+      counts.set(word, 0);
+      order.push(word);
+      newWords.push(word);
+    }
+    counts.set(word, (counts.get(word) ?? 0) + 1);
   }
 
   return {
-    dictionary: [...dictionary, ...newWords],
+    dictionary: order.map((word) => ({ word, count: counts.get(word) ?? 0 })),
     newWords,
     bonus: newWords.length * NEW_WORD_BONUS,
   };

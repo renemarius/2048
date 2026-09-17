@@ -219,12 +219,12 @@ describe('spawnTile', () => {
 describe('spawnTile demand-driven formula (fixes ending/duplicate-stem pileup)', () => {
   // Fixture pool distinct from real VOCAB, so these tests are fully
   // deterministic and independent of the actual word list.
-  const POOL = [
-    { word: 'A다', meaning: 'a' },
-    { word: 'B다', meaning: 'b' },
-    { word: 'C다', meaning: 'c' },
-    { word: 'D다', meaning: 'd' },
-  ];
+  const POOL = ['A다', 'B다', 'C다', 'D다'].map((word) => ({
+    word,
+    meaning: word,
+    exampleSentence: `${word} example.`,
+    exampleTranslation: 'example',
+  }));
 
   it('never spawns a duplicate stem for a pool word already on the board', () => {
     // Only word A has a tile; A already has a stem, so it must not be
