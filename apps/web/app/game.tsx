@@ -171,18 +171,24 @@ export function Game() {
   const boardRef = useRef(board);
   const scoreRef = useRef(score);
   const poolRef = useRef(pool);
-  const isMountedRef = useRef(true);
+  const isMountedRef = useRef(false);
   useEffect(() => {
     boardRef.current = board;
     scoreRef.current = score;
     poolRef.current = pool;
   });
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    // Set (not just initialized) inside the effect itself so this is
+    // correctly re-armed on React Strict Mode's dev-only mount -> cleanup
+    // -> mount cycle. A `useRef(true)` initializer alone stays stuck at
+    // `false` after that cycle's cleanup runs, since nothing ever resets
+    // it back — which would silently disable every fade/clear timeout
+    // below for the component's entire real lifetime in `next dev`.
+    isMountedRef.current = true;
+    return () => {
       isMountedRef.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
 
   // Restore a persisted session on mount, or start a fresh one. Runs once,
   // client-side only — the server/first-paint render always shows the
