@@ -51,15 +51,22 @@ is judged by hand.
 
 Two tile types exist on a 4×4 board:
 
-- **Stem tiles** — a verb/adjective root (e.g. `가-`, `먹-`, `좋-`).
-- **Ending tiles** — a grammatical ending (e.g. `-아요`, `-었어요`).
+- **Stem tiles** — a verb/adjective root, grammatically (e.g. `가-`,
+  `먹-`, `좋-`). **Displayed on the tile as the full dictionary form**
+  (e.g. `가다`, `먹다`) rather than the bare hyphenated stem — clearer for
+  a learner, and it's the form they'd actually look up.
+- **Ending tiles** — a grammatical ending, grammatically (e.g. `-아요`,
+  `-었어요`). **Displayed on the tile as the Korean grammar term** `현재`
+  (present) or `과거` (past) rather than a literal suffix, since one
+  ending tile is generic and its actual surface form depends on whichever
+  stem it merges with (see `specs/ui-v1.md`).
 
 Unlike vanilla 2048 (identical tiles merge), here **a stem tile merges with
 a grammatically compatible ending tile** to produce a single **word tile**
-showing the conjugated form (e.g. `가-` + `-아요` → `가요`). A word tile can
-then merge again with a further compatible ending tile to re-conjugate
-(e.g. `가요` + `-았어요` → `갔어요`), chaining the way 2/4/8 chains in
-classic 2048.
+(displayed as its conjugated `surfaceForm`, e.g. `가요`) — grammatically,
+`가-` + `-아요` → `가요`. A word tile can then merge again with a further
+compatible ending tile to re-conjugate (e.g. `가요` + `-았어요` → `갔어요`),
+chaining the way 2/4/8 chains in classic 2048.
 
 Movement: arrow keys / WASD shift the whole board in one direction, as in
 2048. Tiles slide until they hit the edge or another tile; if the tile they
@@ -217,8 +224,9 @@ stem→word→conjugated-word chain instead.
       compatibility, spawn new tile) — unit tested independent of UI
       (161 passing tests across hangul/conjugate/vocab/board)
 - [x] `packages/core`: active word pool (Section 3.2) — spawn restricted
-      to the pool, clear-and-replace on word completion — implemented and
-      unit tested (`pool.ts`, `clearCompletedTiles`; 171 tests total)
+      to the pool, clear-and-replace on word completion, demand-driven
+      spawn formula (`analyzeBoardNeeds`) — implemented and unit tested
+      (`pool.ts`, `clearCompletedTiles`; 176 tests total)
 - [x] `apps/web`: board renders, keyboard (arrows + WASD) control works,
       per `specs/ui-v1.md` — verified via local dev/build; not yet
       deployed to Vercel (see the separate deploy checklist item below)
@@ -267,8 +275,3 @@ between sessions:
   deferred together as one follow-up feature — the gameplay-loop feature
   intentionally shipped without them (session score/board/best-score
   persistence only)
-- **Tile animation:** v1 uses snap-to-position + fade/scale-in on newly
-  spawned or newly merged tiles only (no sliding animation), since a
-  merge produces a brand-new tile id with no natural "moved from A to B"
-  to animate without extra position-tracking work. Revisit true sliding
-  as later polish if wanted.

@@ -146,10 +146,48 @@ introducing a parallel styling system — keeps Principle 5's "theming stays
 swappable" intact: a future third theme only needs one more token set,
 panel included.
 
+## Tile animation — DECIDED
+
+v1 uses **snap-to-position, not sliding.** A merge produces a brand-new
+tile `id` (not a continuation of either input tile), so there's no
+natural "this tile slid from A to B" to animate without extra
+position-tracking machinery `packages/core` doesn't currently provide.
+Instead: existing tiles jump instantly to their new grid position, and
+only newly spawned or newly merged tiles get a fade/scale-in (CSS
+`animation`, plays automatically on mount since a merge/spawn always
+produces a fresh DOM node via its new `id`-keyed `key`). True sliding is
+a fine later-polish item, not a v1 requirement.
+
+## Tile label content — DECIDED
+
+What's literally rendered as text on each tile type (distinct from the
+grammatical notation used to *explain* the mechanic in constitution.md
+Section 3):
+
+- **Stem tile** — the full dictionary form (e.g. `가다`, `먹다`), not a
+  bare hyphenated stem (`가-`). Clearer for a learner, and it's the form
+  they'd actually look up in a dictionary.
+- **Ending tile** — the Korean grammar term `현재` (present) or `과거`
+  (past), not a literal suffix like `-아요`. One ending tile is generic
+  across every pattern group — its actual surface form depends entirely
+  on whichever stem it ends up merging with, so a fixed suffix string
+  would often be wrong for the specific merge that happens. Also keeps
+  the board Korean-only per the gloss decision below, while still
+  exposing two more pieces of real vocabulary (현재/과거) for free.
+- **Word tile** — the actual conjugated `surfaceForm` (e.g. `먹어요`,
+  `갔어요`) — unambiguous, no alternative considered.
+
 ## v1 functional UI components — DECIDED baseline
 
-- **Board** — 4×4 grid, tile slide/merge animation on move (arrow keys and
-  WASD both bound to the same four directions)
+- **Board** — 4×4 grid. Existing tiles snap instantly to their new
+  position on a move (no sliding animation — see "Tile animation"
+  below); newly spawned or newly merged tiles fade/scale in on mount.
+  Arrow keys and WASD both bound to the same four directions.
+- **Word completion** — when a word reaches its past (final v1) stage,
+  its tile stays fully visible for ~1.2s (so the player actually reads
+  what they conjugated), then fades out over ~0.3s, then is cleared along
+  with any other tile belonging to that word — see constitution.md
+  Section 3.2 and `packages/core/src/pool.ts`.
 - **Header** — current session score, persisted best score
 - **Restart / new game** button — resets the board and session score;
   does not touch the permanent dictionary or best score
