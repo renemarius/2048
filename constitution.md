@@ -327,9 +327,8 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       auto-opens once on first-ever visit (`localStorage`-tracked).
       Verified via `npm run test` (189 passing, unchanged), `typecheck`,
       `build` (all clean), and a running `next dev` serving with no
-      compile errors — the modal's actual on-screen appearance, the
-      first-visit auto-open firing, and Escape/button-click interaction
-      are not yet confirmed by hand
+      compile errors. Hands-on browser pass (modal appearance, first-visit
+      auto-open, Escape/button-click interaction) confirmed by the user
 - [ ] **Level 2 vocab: irregular conjugation classes** — ㄷ/ㅂ/ㅅ/르/ㅎ and
       ㅡ-contraction, the words excluded from v1 (`specs/vocab-v1.md`'s
       excluded list), added as a distinct Level 2 unlocked after Level 1
@@ -353,8 +352,8 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       for the bezel, `--tile-stem`/`--tile-stem-text` for the screen/text)
       instead of a dark near-black gray that clashed with the rest of the
       theme (see `specs/ui-v2.md`). Verified via the same automated bar
-      as the rules panel above — the actual visual fit hasn't been judged
-      in a real browser yet, not yet confirmed by hand
+      as the rules panel above, plus a hands-on browser pass — the user
+      confirmed the new palette actually fits
 
 ### v3 — Personalization & polish (future)
 
