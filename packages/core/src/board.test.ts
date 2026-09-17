@@ -216,6 +216,90 @@ describe('spawnTile', () => {
   });
 });
 
+describe('spawnTile demand-driven formula (fixes ending/duplicate-stem pileup)', () => {
+  // Fixture pool distinct from real VOCAB, so these tests are fully
+  // deterministic and independent of the actual word list.
+  const POOL = [
+    { word: 'A다', meaning: 'a' },
+    { word: 'B다', meaning: 'b' },
+    { word: 'C다', meaning: 'c' },
+    { word: 'D다', meaning: 'd' },
+  ];
+
+  it('never spawns a duplicate stem for a pool word already on the board', () => {
+    // Only word A has a tile; A already has a stem, so it must not be
+    // re-spawned — this is the exact bug from the screenshot (가다 and 가요
+    // both present at once).
+    const board = emptyBoardWith([[0, 0, stemTile('A다')]]);
+    for (let trial = 0; trial < 30; trial += 1) {
+      const result = spawnTile(board, [POOL[0]]);
+      const spawned = result.flat().find((cell) => cell !== null && cell.id !== board[0][0]?.id);
+      expect(spawned).not.toMatchObject({ kind: 'stem', word: 'A다' });
+    }
+  });
+
+  it('spawns the stem of a missing pool word when endings are already saturated', () => {
+    // A, B, C already have a stem each, matched 1:1 by present endings
+    // (no deficit) — only D is missing, so D's stem is the sole
+    // candidate.
+    const board = emptyBoardWith([
+      [0, 0, stemTile('A다')],
+      [0, 1, stemTile('B다')],
+      [0, 2, stemTile('C다')],
+      [1, 0, endingTile('present')],
+      [1, 1, endingTile('present')],
+      [1, 2, endingTile('present')],
+    ]);
+    const result = spawnTile(board, POOL);
+    const spawned = result.flat().find((cell, i) => cell !== null && board.flat()[i] === null);
+    expect(spawned).toMatchObject({ kind: 'stem', word: 'D다' });
+  });
+
+  it('spawns a present ending when every pool word is represented but under-matched', () => {
+    // All 4 pool words already have a stem on the board and there are no
+    // endings at all yet — nothing is "missing", but every stem still
+    // needs a present ending.
+    const board = emptyBoardWith([
+      [0, 0, stemTile('A다')],
+      [0, 1, stemTile('B다')],
+      [0, 2, stemTile('C다')],
+      [0, 3, stemTile('D다')],
+    ]);
+    const result = spawnTile(board, POOL);
+    const spawned = result.flat().find((cell, i) => cell !== null && board.flat()[i] === null);
+    expect(spawned).toMatchObject({ kind: 'ending', tense: 'present' });
+  });
+
+  it('spawns a past ending when present-stage words outnumber past endings', () => {
+    const board = emptyBoardWith([
+      [0, 0, wordTile('A다', 'present', 'A어요')],
+      [0, 1, wordTile('B다', 'present', 'B어요')],
+      [0, 2, wordTile('C다', 'present', 'C어요')],
+      [0, 3, wordTile('D다', 'present', 'D어요')],
+    ]);
+    const result = spawnTile(board, POOL);
+    const spawned = result.flat().find((cell, i) => cell !== null && board.flat()[i] === null);
+    expect(spawned).toMatchObject({ kind: 'ending', tense: 'past' });
+  });
+
+  it('stops spawning endings once supply already matches demand', () => {
+    // 2 stems, 2 present endings already (deficit 0), and B/C are the
+    // missing pool words — every spawn must be a stem for B or C, never
+    // another ending.
+    const board = emptyBoardWith([
+      [0, 0, stemTile('A다')],
+      [0, 1, stemTile('D다')],
+      [0, 2, endingTile('present')],
+      [0, 3, endingTile('present')],
+    ]);
+    for (let trial = 0; trial < 30; trial += 1) {
+      const result = spawnTile(board, POOL);
+      const spawned = result.flat().find((cell, i) => cell !== null && board.flat()[i] === null);
+      expect(spawned?.kind).toBe('stem');
+    }
+  });
+});
+
 describe('createInitialBoard', () => {
   it('starts with exactly two tiles', () => {
     const board = createInitialBoard(VOCAB);

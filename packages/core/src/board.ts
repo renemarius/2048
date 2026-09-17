@@ -173,17 +173,89 @@ export function move(board: Board, direction: Direction): MoveResult {
   return { board: newBoard, scoreDelta: totalScoreDelta, completedWords: allCompletedWords, moved };
 }
 
-function createSpawnTile(vocab: readonly VocabEntry[]): Tile {
-  // First-pass spawn weighting (constitution.md Section 3.2, marked OPEN
-  // there for build-time tuning): 50/50 stem vs. ending, and endings lean
-  // present (70/30) since a past ending is only useful once a
-  // present-stage word tile already exists on the board.
-  if (Math.random() < 0.5) {
-    const entry = vocab[Math.floor(Math.random() * vocab.length)];
-    return { kind: 'stem', id: generateId(), word: entry.word };
+interface BoardNeeds {
+  /** Pool words with no live tile (stem or word, any stage) on the board. */
+  missingPoolWords: string[];
+  /** How many more present endings would actually find a use right now. */
+  presentEndingDeficit: number;
+  /** How many more past endings would actually find a use right now. */
+  pastEndingDeficit: number;
+}
+
+/**
+ * What the board actually needs next, given the words currently in play.
+ * A stem is "needed" only for a pool word that has no tile on the board
+ * yet (prevents spawning a second stem for a word already in progress,
+ * which used to pile up duplicates like a stray 가다 sitting next to its
+ * own 가요). An ending is "needed" only up to how many tiles could
+ * actually use one right now (deficit = demand - supply, floored at 0),
+ * so endings stop accumulating once there's nothing left for them to
+ * merge with.
+ */
+function analyzeBoardNeeds(board: Board, poolWords: readonly string[]): BoardNeeds {
+  let stemCount = 0;
+  let presentWordCount = 0;
+  let presentEndingCount = 0;
+  let pastEndingCount = 0;
+  const wordsOnBoard = new Set<string>();
+
+  for (const row of board) {
+    for (const cell of row) {
+      if (!cell) continue;
+      if (cell.kind === 'stem') {
+        stemCount += 1;
+        wordsOnBoard.add(cell.word);
+      } else if (cell.kind === 'word') {
+        wordsOnBoard.add(cell.word);
+        if (cell.stage === 'present') presentWordCount += 1;
+      } else if (cell.tense === 'present') {
+        presentEndingCount += 1;
+      } else {
+        pastEndingCount += 1;
+      }
+    }
   }
-  const tense: ConjugationStage = Math.random() < 0.7 ? 'present' : 'past';
-  return { kind: 'ending', id: generateId(), tense };
+
+  return {
+    missingPoolWords: poolWords.filter((word) => !wordsOnBoard.has(word)),
+    presentEndingDeficit: Math.max(0, stemCount - presentEndingCount),
+    pastEndingDeficit: Math.max(0, presentWordCount - pastEndingCount),
+  };
+}
+
+function createSpawnTile(board: Board, vocab: readonly VocabEntry[]): Tile {
+  const poolWords = vocab.map((entry) => entry.word);
+  const needs = analyzeBoardNeeds(board, poolWords);
+
+  const candidates: Array<() => Tile> = [];
+  if (needs.missingPoolWords.length > 0) {
+    candidates.push(() => {
+      const word = needs.missingPoolWords[Math.floor(Math.random() * needs.missingPoolWords.length)];
+      return { kind: 'stem', id: generateId(), word };
+    });
+  }
+  if (needs.presentEndingDeficit > 0) {
+    candidates.push(() => ({ kind: 'ending', id: generateId(), tense: 'present' }));
+  }
+  if (needs.pastEndingDeficit > 0) {
+    candidates.push(() => ({ kind: 'ending', id: generateId(), tense: 'past' }));
+  }
+
+  if (candidates.length === 0) {
+    // Board already has everything it currently needs (rare, and
+    // self-correcting once the next move changes the board) — fall back
+    // to a generic weighted spawn so the game never stalls with an empty
+    // cell and nothing to put in it.
+    if (vocab.length > 0 && Math.random() < 0.5) {
+      const entry = vocab[Math.floor(Math.random() * vocab.length)];
+      return { kind: 'stem', id: generateId(), word: entry.word };
+    }
+    const tense: ConjugationStage = Math.random() < 0.7 ? 'present' : 'past';
+    return { kind: 'ending', id: generateId(), tense };
+  }
+
+  const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+  return chosen();
 }
 
 export function spawnTile(board: Board, vocab: readonly VocabEntry[]): Board {
@@ -197,7 +269,7 @@ export function spawnTile(board: Board, vocab: readonly VocabEntry[]): Board {
 
   const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
   const newBoard = board.map((r) => r.slice());
-  newBoard[row][col] = createSpawnTile(vocab);
+  newBoard[row][col] = createSpawnTile(board, vocab);
   return newBoard;
 }
 

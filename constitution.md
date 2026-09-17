@@ -107,10 +107,26 @@ those remain excluded. Locked v1 scope:
   completed tile stays fully visible for ~1.2s so the player actually
   reads what they conjugated, then fades out over ~0.3s before being
   cleared (see `packages/core/src/pool.ts` and `apps/web/app/game.tsx`).
-- **Spawn:** after each move, one new tile spawns in a random empty cell —
-  a stem tile drawn from the current active pool, or a generic ending
-  tile (weighted toward present, since past endings are only useful once
-  a present-stage word tile already exists).
+- **Spawn (demand-driven, not flat-probability):** after each move, one
+  new tile spawns in a random empty cell, chosen from whichever of these
+  the board actually needs right now (uniformly among the ones that
+  apply; see `analyzeBoardNeeds` in `packages/core/src/board.ts`):
+  - a **missing pool word's stem** — a pool word with no live tile
+    (stem or word, any stage) anywhere on the board. A pool word that
+    already has a tile in play is never re-spawned as a duplicate stem.
+  - a **present ending**, while stems on the board outnumber present
+    endings (deficit = stem count − present-ending count, floored at 0)
+  - a **past ending**, while present-stage word tiles outnumber past
+    endings (same deficit logic)
+
+  If none of these apply (board already has everything it currently
+  needs — rare, self-correcting on the next move), fall back to a
+  generic weighted spawn so an empty cell is never left unfilled. This
+  replaced an earlier flat 50/50 stem-vs-ending split that had no notion
+  of "enough" — endings could pile up indefinitely once the small active
+  pool ran out of stems to pair them with, and duplicate stems for a
+  word already in play were common, both of which visibly clogged the
+  board in practice.
 - **Game over:** board full and no adjacent stem/ending or word/ending pair
   is grammatically compatible (no legal merge remains) — direct analogue
   of 2048's loss condition.
