@@ -233,12 +233,22 @@ stem→word→conjugated-word chain instead.
 - [x] `apps/web`: session score updates on merge (see Section 3.3), best
       score, board state, and the active pool all persist across reload
       via `localStorage`
-- [ ] `apps/web`: dictionary persists new words to `localStorage`
-      (deferred to its own feature — see Open Decisions Log)
+- [x] `apps/web`: dictionary persists new words to `localStorage` — a base
+      word's first-ever past-stage completion adds it to a persistent
+      dictionary (`packages/core/src/dictionary.ts`'s `updateDictionary`,
+      unit tested) and fires the +50 one-time bonus and a "new word" toast;
+      verified via `npm run test`/`typecheck`/`build` and a running
+      `next dev` serving the updated markup with no compile errors — the
+      toast's on-screen appearance/timing and the +50 actually landing from
+      a real keypress-driven merge are not yet confirmed by hand
 - [x] `apps/web`: theme toggle (Classic / Modern ink & paper) implemented
       and persisted, per `specs/ui-v1.md`
-- [ ] `apps/web`: minimal dictionary panel (word + meaning list, no
-      search/filter) implemented, per `specs/ui-v1.md`
+- [x] `apps/web`: minimal dictionary panel (word + meaning list, no
+      search/filter) implemented, per `specs/ui-v1.md` — themed per the
+      Dictionary Panel Visual Treatment spec (Classic "digital tablet"
+      bezel, Modern "notebook paper" ruled lines); same verification
+      caveat as above — the two themed skins haven't been eyeballed in a
+      real browser yet
 - [x] Game-over detection works (no legal moves remain) — implemented,
       unit tested, and wired into the UI (game-over modal + restart)
 - [ ] Played end-to-end by you, by hand, and it's actually fun / correct
@@ -269,9 +279,8 @@ Later versions (v4+) to be defined once v3 ships.
 Track anything still unresolved here as it comes up, so it doesn't get lost
 between sessions:
 
-- **Dictionary persistence feature (next up):** the permanent word
-  dictionary, the +50 one-time bonus, the "new word" toast, and the
-  dictionary panel UI (`specs/ui-v1.md`'s tablet/paper skins) are all
-  deferred together as one follow-up feature — the gameplay-loop feature
-  intentionally shipped without them (session score/board/best-score
-  persistence only)
+- **Dictionary persistence feature:** resolved — implemented as the
+  permanent word dictionary, +50 one-time bonus, "new word" toast, and
+  the tablet/paper-skinned dictionary panel (see the v1 checklist above).
+  Still needs a hands-on browser pass (toast appearance/timing, both theme
+  skins) since no browser tool is available this session.

@@ -14,14 +14,11 @@ import {
   isGameOver,
   move,
   spawnTile,
+  updateDictionary,
+  NEW_WORD_BONUS,
 } from 'core';
 import { ThemeToggle } from './theme-toggle';
 import styles from './game.module.css';
-
-// v1 scope note: this is the gameplay loop only (board, moves, session +
-// best score, the active-word pool). The permanent dictionary, +50
-// new-word bonus, and the dictionary panel are a separate feature layered
-// on top later — see constitution.md's v1 checklist.
 
 // Only this many words are "in rotation" on the board at once (rather
 // than drawing from the full 62-word vocabulary), so the same few words
@@ -36,8 +33,12 @@ const POOL_SIZE = 4;
 const FADE_HOLD_MS = 1200;
 const FADE_DURATION_MS = 300;
 
+// How long the "new word" toast stays on screen before auto-dismissing.
+const TOAST_DURATION_MS = 2400;
+
 const SESSION_KEY = '2048-hangul:session';
 const BEST_SCORE_KEY = '2048-hangul:bestScore';
+const DICTIONARY_KEY = '2048-hangul:dictionary';
 
 const KEY_TO_DIRECTION: Record<string, Direction> = {
   ArrowUp: 'up',
@@ -111,6 +112,30 @@ function persistBestScore(value: number): void {
   }
 }
 
+function loadDictionary(): string[] {
+  try {
+    const raw = window.localStorage.getItem(DICTIONARY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.every((word) => typeof word === 'string')) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+function persistDictionary(words: readonly string[]): void {
+  try {
+    window.localStorage.setItem(DICTIONARY_KEY, JSON.stringify(words));
+  } catch {
+    // see persistSession
+  }
+}
+
+function meaningFor(word: string): string {
+  return VOCAB.find((entry) => entry.word === word)?.meaning ?? '';
+}
+
 function vocabForWords(words: readonly string[]): VocabEntry[] {
   const wordSet = new Set(words);
   return VOCAB.filter((entry) => wordSet.has(entry.word));
@@ -164,6 +189,10 @@ export function Game() {
   const [gameOver, setGameOver] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [clearingWords, setClearingWords] = useState<Set<string>>(new Set());
+  const [dictionary, setDictionary] = useState<string[]>([]);
+  const [dictionaryOpen, setDictionaryOpen] = useState(false);
+  const [newWordToast, setNewWordToast] = useState<string[] | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
 
   // Refs mirror the latest committed state so the delayed fade-out/clear
   // timers (see scheduleCompletion below) always act on current data even
@@ -207,7 +236,14 @@ export function Game() {
       persistSession(session);
     }
     setBestScore(loadBestScore());
+    setDictionary(loadDictionary());
     setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current !== null) window.clearTimeout(toastTimeoutRef.current);
+    };
   }, []);
 
   // Runs FADE_HOLD_MS after a word completes: mark its tile(s) as fading
@@ -249,11 +285,22 @@ export function Game() {
       if (!result.moved) return;
 
       const nextBoard = spawnTile(result.board, vocabForWords(pool.active));
-      const nextScore = score + result.scoreDelta;
+      const dictUpdate = updateDictionary(dictionary, result.completedWords);
+      const nextScore = score + result.scoreDelta + dictUpdate.bonus;
 
       setBoard(nextBoard);
       setScore(nextScore);
       persistSession({ board: nextBoard, score: nextScore, pool });
+
+      if (dictUpdate.newWords.length > 0) {
+        setDictionary(dictUpdate.dictionary);
+        persistDictionary(dictUpdate.dictionary);
+        setNewWordToast(dictUpdate.newWords);
+        if (toastTimeoutRef.current !== null) window.clearTimeout(toastTimeoutRef.current);
+        toastTimeoutRef.current = window.setTimeout(() => {
+          setNewWordToast(null);
+        }, TOAST_DURATION_MS);
+      }
 
       if (nextScore > bestScore) {
         setBestScore(nextScore);
@@ -268,7 +315,7 @@ export function Game() {
         scheduleCompletion(result.completedWords);
       }
     },
-    [board, score, bestScore, gameOver, pool, scheduleCompletion],
+    [board, score, bestScore, gameOver, pool, dictionary, scheduleCompletion],
   );
 
   useEffect(() => {
@@ -312,10 +359,25 @@ export function Game() {
             <span className={styles.scoreValue}>{bestScore}</span>
           </div>
         </div>
-        <button type="button" className={styles.button} onClick={handleRestart}>
-          New game
-        </button>
+        <div className={styles.controlButtons}>
+          <button type="button" className={styles.button} onClick={() => setDictionaryOpen(true)}>
+            Dictionary ({dictionary.length})
+          </button>
+          <button type="button" className={styles.button} onClick={handleRestart}>
+            New game
+          </button>
+        </div>
       </div>
+
+      {newWordToast && newWordToast.length > 0 && (
+        <div className={styles.toast} role="status">
+          {newWordToast.map((word) => (
+            <div key={word} className={styles.toastLine}>
+              New word: <strong>{word}</strong> ({meaningFor(word)}) +{NEW_WORD_BONUS}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className={styles.boardWrap}>
         <div className={styles.cellGrid}>
@@ -351,6 +413,43 @@ export function Game() {
             <button type="button" className={styles.button} onClick={handleRestart}>
               Play again
             </button>
+          </div>
+        </div>
+      )}
+
+      {dictionaryOpen && (
+        <div className={styles.modalOverlay} onClick={() => setDictionaryOpen(false)}>
+          <div
+            className={styles.dictionaryPanel}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={styles.dictionaryScreen}>
+              <div className={styles.dictionaryHeader}>
+                <h2>Dictionary</h2>
+                <button
+                  type="button"
+                  className={styles.dictionaryClose}
+                  onClick={() => setDictionaryOpen(false)}
+                  aria-label="Close dictionary"
+                >
+                  ×
+                </button>
+              </div>
+              {dictionary.length === 0 ? (
+                <p className={styles.dictionaryEmpty}>
+                  No words learned yet — conjugate one to its past form to add it here.
+                </p>
+              ) : (
+                <ul className={styles.dictionaryList}>
+                  {dictionary.map((word) => (
+                    <li key={word} className={styles.dictionaryRow}>
+                      <span className={styles.dictionaryWord}>{word}</span>
+                      <span className={styles.dictionaryMeaning}>{meaningFor(word)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
       )}

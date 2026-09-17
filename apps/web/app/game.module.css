@@ -59,6 +59,11 @@
   font-weight: 700;
 }
 
+.controlButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .button {
   font: inherit;
   border: none;
@@ -192,4 +197,155 @@
 
 .modal p {
   margin: 0;
+}
+
+/* "New word" toast — the +50 dictionary-bonus moment, the single most
+   visually distinct event on screen per specs/ui-v1.md. */
+.toast {
+  position: fixed;
+  top: calc(1rem + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  background: var(--tile-word-past);
+  color: var(--tile-word-past-text);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: center;
+  animation: toast-in 200ms ease-out;
+}
+
+.toastLine + .toastLine {
+  margin-top: 0.25rem;
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateX(-50%) translateY(-12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Dictionary panel — base styling is the Classic "digital tablet" skin
+   (thick dark bezel around a lit screen); [data-theme='modern'] below
+   restyles it as a physical notebook-paper sheet instead. Both skins
+   consume the --dict-* tokens from globals.css, per
+   specs/ui-v1.md's "Implementation note" (no parallel styling system). */
+.dictionaryPanel {
+  width: 100%;
+  max-width: 360px;
+  background: var(--dict-bezel-bg);
+  border-radius: 22px;
+  padding: 0.9rem 0.9rem 1.6rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.dictionaryScreen {
+  background: var(--dict-screen-bg);
+  color: var(--dict-text);
+  border-radius: 12px;
+  padding: 1rem;
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  position: relative;
+}
+
+.dictionaryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.dictionaryHeader h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.dictionaryClose {
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+.dictionaryEmpty {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.dictionaryList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dictionaryRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.1rem;
+  border-bottom: 1px solid var(--dict-divider);
+  font-size: 0.85rem;
+}
+
+.dictionaryRow:last-child {
+  border-bottom: none;
+}
+
+.dictionaryWord {
+  font-weight: 700;
+}
+
+.dictionaryMeaning {
+  color: var(--dict-meaning-text);
+  text-align: right;
+}
+
+/* Modern ink & paper: literal notebook-paper sheet instead of a tablet
+   bezel — ruled lines behind each row, a red margin line near the left
+   edge (specs/ui-v1.md "Dictionary Panel Visual Treatment"). */
+:global(html[data-theme='modern']) .dictionaryPanel {
+  border-radius: 4px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  padding: 0;
+}
+
+:global(html[data-theme='modern']) .dictionaryScreen {
+  border-radius: 4px;
+  padding: 1rem 1rem 1rem 1.75rem;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(2.4rem - 1px),
+    var(--dict-divider) calc(2.4rem - 1px),
+    var(--dict-divider) 2.4rem
+  );
+  background-position: 0 2.4rem;
+}
+
+:global(html[data-theme='modern']) .dictionaryScreen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 1rem;
+  width: 2px;
+  background: var(--dict-margin);
+}
+
+:global(html[data-theme='modern']) .dictionaryRow {
+  border-bottom: none;
 }

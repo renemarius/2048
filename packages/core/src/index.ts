@@ -4,3 +4,4 @@ export * from './types';
 export * from './vocab';
 export * from './board';
 export * from './pool';
+export * from './dictionary';
