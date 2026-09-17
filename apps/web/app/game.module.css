@@ -199,6 +199,19 @@
   margin: 0;
 }
 
+/* Rules panel (specs/ui-v2.md) — same overlay/card as .modal, but reads
+   like a short reference doc rather than a game-over prompt: left-aligned,
+   a bit wider. */
+.rulesModal {
+  max-width: 420px;
+  text-align: left;
+}
+
+.rulesList {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
 /* "New word" toast — the +50 dictionary-bonus moment, the single most
    visually distinct event on screen per specs/ui-v1.md. */
 .toast {

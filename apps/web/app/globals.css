@@ -19,12 +19,15 @@
 
   --ui-text: #776e65;
 
-  /* Dictionary panel — "digital tablet" per specs/ui-v1.md */
-  --dict-bezel-bg: #2b2b2b;
-  --dict-screen-bg: #3a3a3a;
-  --dict-text: #f5f5f5;
-  --dict-meaning-text: rgba(245, 245, 245, 0.7);
-  --dict-divider: rgba(255, 255, 255, 0.1);
+  /* Dictionary panel — "digital tablet" per specs/ui-v1.md, recolored per
+     specs/ui-v2.md to reuse Classic's own warm tokens (board-bg for the
+     bezel, tile-stem for the screen) instead of a cool near-black device
+     look that clashed with the rest of the theme. */
+  --dict-bezel-bg: var(--board-bg);
+  --dict-screen-bg: var(--tile-stem);
+  --dict-text: var(--tile-stem-text);
+  --dict-meaning-text: rgba(119, 110, 101, 0.7);
+  --dict-divider: rgba(119, 110, 101, 0.15);
   --dict-margin: transparent;
 }
 

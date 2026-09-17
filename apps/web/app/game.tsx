@@ -47,6 +47,7 @@ const TOAST_DURATION_MS = 2400;
 const SESSION_KEY = '2048-hangul:session';
 const BEST_SCORE_KEY = '2048-hangul:bestScore';
 const DICTIONARY_KEY = '2048-hangul:dictionary';
+const RULES_SEEN_KEY = '2048-hangul:rulesSeen';
 
 const KEY_TO_DIRECTION: Record<string, Direction> = {
   ArrowUp: 'up',
@@ -145,6 +146,22 @@ function loadDictionary(): DictionaryEntry[] {
   }
 }
 
+function hasSeenRules(): boolean {
+  try {
+    return window.localStorage.getItem(RULES_SEEN_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function persistRulesSeen(): void {
+  try {
+    window.localStorage.setItem(RULES_SEEN_KEY, 'true');
+  } catch {
+    // see persistSession
+  }
+}
+
 function persistDictionary(entries: readonly DictionaryEntry[]): void {
   try {
     window.localStorage.setItem(DICTIONARY_KEY, JSON.stringify(entries));
@@ -232,6 +249,7 @@ export function Game() {
   const [clearingWords, setClearingWords] = useState<Set<string>>(new Set());
   const [dictionary, setDictionary] = useState<DictionaryEntry[]>([]);
   const [dictionaryOpen, setDictionaryOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [newWordToast, setNewWordToast] = useState<string[] | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
 
@@ -279,6 +297,14 @@ export function Game() {
     setBestScore(loadBestScore());
     setDictionary(loadDictionary());
     setHydrated(true);
+
+    // First-ever visit (specs/ui-v2.md "Rules panel"): auto-open once so a
+    // new player learns the objective and what 현재/과거 mean without
+    // having to find the "?" button first. Never auto-opens again.
+    if (!hasSeenRules()) {
+      setRulesOpen(true);
+      persistRulesSeen();
+    }
   }, []);
 
   useEffect(() => {
@@ -370,6 +396,7 @@ export function Game() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if (rulesOpen) return; // blocking modal — don't move the board underneath it
       const direction = KEY_TO_DIRECTION[event.key];
       if (direction) {
         event.preventDefault();
@@ -378,7 +405,7 @@ export function Game() {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleMove]);
+  }, [handleMove, rulesOpen]);
 
   // The dictionary drawer is docked, not a blocking modal (constitution.md
   // Open Decisions Log) — gameplay keeps working while it's open. Escape
@@ -391,6 +418,18 @@ export function Game() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [dictionaryOpen]);
+
+  // Rules panel: blocking modal (unlike the dictionary drawer) since it's
+  // reference info read once, not something kept open during play. Escape
+  // closes it, same convention as the dictionary drawer.
+  useEffect(() => {
+    if (!rulesOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setRulesOpen(false);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [rulesOpen]);
 
   function handleRestart() {
     const session = newSession();
@@ -423,6 +462,14 @@ export function Game() {
           </div>
         </div>
         <div className={styles.controlButtons}>
+          <button
+            type="button"
+            className={styles.button}
+            onClick={() => setRulesOpen(true)}
+            aria-label="How to play"
+          >
+            ?
+          </button>
           <button
             type="button"
             className={styles.button}
@@ -488,6 +535,36 @@ export function Game() {
             </p>
             <button type="button" className={styles.button} onClick={handleRestart}>
               Play again
+            </button>
+          </div>
+        </div>
+      )}
+
+      {rulesOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={`${styles.modal} ${styles.rulesModal}`}>
+            <h2>How to play</h2>
+            <p>
+              Slide the whole board with arrow keys or WASD, like classic 2048. A{' '}
+              <strong>stem</strong> tile (a verb/adjective, e.g. 가다) merges with a compatible{' '}
+              <strong>ending</strong> tile into a conjugated <strong>word</strong> tile — that word
+              tile can merge again with another ending to re-conjugate. No legal merge left
+              anywhere on the board ends the game.
+            </p>
+            <ul className={styles.rulesList}>
+              <li>
+                <strong>현재</strong> — present tense
+              </li>
+              <li>
+                <strong>과거</strong> — past tense
+              </li>
+            </ul>
+            <p>
+              Reaching past tense on a word for the first time adds it to your{' '}
+              <strong>Dictionary</strong> and scores a one-time bonus.
+            </p>
+            <button type="button" className={styles.button} onClick={() => setRulesOpen(false)}>
+              Got it
             </button>
           </div>
         </div>

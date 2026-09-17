@@ -320,10 +320,16 @@ playtest/deploy checklist items first. See Open Decisions Log below.
 
 ### v2 — Educational depth (future)
 
-- [ ] **Rules panel** — onboarding panel/modal explaining the objective
+- [x] **Rules panel** — onboarding panel/modal explaining the objective
       and translating the `현재`/`과거` tile labels (present/past), since a
       new player has no other way to learn what those mean (see
-      `specs/ui-v2.md`)
+      `specs/ui-v2.md`); a "?" header button opens it anytime, and it
+      auto-opens once on first-ever visit (`localStorage`-tracked).
+      Verified via `npm run test` (189 passing, unchanged), `typecheck`,
+      `build` (all clean), and a running `next dev` serving with no
+      compile errors — the modal's actual on-screen appearance, the
+      first-visit auto-open firing, and Escape/button-click interaction
+      are not yet confirmed by hand
 - [ ] **Level 2 vocab: irregular conjugation classes** — ㄷ/ㅂ/ㅅ/르/ㅎ and
       ㅡ-contraction, the words excluded from v1 (`specs/vocab-v1.md`'s
       excluded list), added as a distinct Level 2 unlocked after Level 1
@@ -342,9 +348,13 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       (see `specs/game-modes-v2.md`)
 - [ ] Enhanced dictionary UI — search, filter, alphabetical sort, and a
       bookmark/star tab for saved words (see `specs/ui-v2.md`)
-- [ ] Dictionary panel color fix (Classic theme) — restyle to fit the
-      existing Classic palette instead of clashing with it (see
-      `specs/ui-v2.md`)
+- [x] Dictionary panel color fix (Classic theme) — the "digital tablet"
+      bezel/screen now reuse Classic's own existing tokens (`--board-bg`
+      for the bezel, `--tile-stem`/`--tile-stem-text` for the screen/text)
+      instead of a dark near-black gray that clashed with the rest of the
+      theme (see `specs/ui-v2.md`). Verified via the same automated bar
+      as the rules panel above — the actual visual fit hasn't been judged
+      in a real browser yet, not yet confirmed by hand
 
 ### v3 — Personalization & polish (future)
 
