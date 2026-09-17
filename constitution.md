@@ -278,7 +278,8 @@ stem→word→conjugated-word chain instead.
       unit tested, and wired into the UI (game-over modal + restart)
 - [x] Played end-to-end by you, by hand, and it's actually fun / correct
       — confirmed, including the active-pool rework and v1.5 additions
-- [ ] Deployed and reachable on a Vercel URL
+- [x] Deployed and reachable on a Vercel URL —
+      https://2048-zeta-five.vercel.app/
 
 ### v1.5 — Learning-optimized UX (session addition, explicit jump-ahead)
 
