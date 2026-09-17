@@ -2,9 +2,15 @@ import { describe, expect, it } from 'vitest';
 import {
   conjugate,
   conjugateBatchimFinal,
+  conjugateBIrregular,
+  conjugateDIrregular,
+  conjugateEuContraction,
   conjugateHada,
+  conjugateHIrregularDescriptive,
+  conjugateLeuIrregular,
   conjugateOpenDiphthong,
   conjugateOpenElision,
+  conjugateSIrregular,
 } from './conjugate';
 
 // Every Group 1 / Group 4 word from specs/vocab-v1.md, present + past,
@@ -138,8 +144,149 @@ describe('conjugateOpenDiphthong (specs/vocab-v1.md Group 3)', () => {
   });
 });
 
+// Every irregular-class word from specs/vocab-v2.md, present + past,
+// exercised exhaustively — same correctness bar as the v1 groups above
+// (constitution.md Principle 1), since a wrong irregular conjugation is a
+// bug, not a nice-to-have.
+
+const dIrregularWords: Array<[word: string, present: string, past: string]> = [
+  ['듣다', '들어요', '들었어요'],
+  ['걷다', '걸어요', '걸었어요'],
+  ['묻다', '물어요', '물었어요'],
+  ['싣다', '실어요', '실었어요'],
+];
+
+describe('conjugateDIrregular (specs/vocab-v2.md ㄷ-irregular)', () => {
+  it.each(dIrregularWords)('%s -> present %s, past %s', (word, present, past) => {
+    expect(conjugateDIrregular(word, 'present')).toBe(present);
+    expect(conjugateDIrregular(word, 'past')).toBe(past);
+  });
+
+  it('rejects a non-ㄷ-batchim stem', () => {
+    expect(() => conjugateDIrregular('먹다', 'present')).toThrow();
+  });
+});
+
+const bIrregularWords: Array<[word: string, present: string, past: string]> = [
+  ['춥다', '추워요', '추웠어요'],
+  ['덥다', '더워요', '더웠어요'],
+  ['쉽다', '쉬워요', '쉬웠어요'],
+  ['어렵다', '어려워요', '어려웠어요'],
+  ['가깝다', '가까워요', '가까웠어요'],
+  ['무겁다', '무거워요', '무거웠어요'],
+  ['귀엽다', '귀여워요', '귀여웠어요'],
+  ['눕다', '누워요', '누웠어요'],
+  ['돕다', '도와요', '도왔어요'],
+];
+
+describe('conjugateBIrregular (specs/vocab-v2.md ㅂ-irregular)', () => {
+  it.each(bIrregularWords)('%s -> present %s, past %s', (word, present, past) => {
+    expect(conjugateBIrregular(word, 'present')).toBe(present);
+    expect(conjugateBIrregular(word, 'past')).toBe(past);
+  });
+
+  it('rejects a non-ㅂ-batchim stem', () => {
+    expect(() => conjugateBIrregular('먹다', 'present')).toThrow();
+  });
+});
+
+const sIrregularWords: Array<[word: string, present: string, past: string]> = [
+  ['짓다', '지어요', '지었어요'],
+  ['낫다', '나아요', '나았어요'],
+  ['붓다', '부어요', '부었어요'],
+  ['젓다', '저어요', '저었어요'],
+  ['긋다', '그어요', '그었어요'],
+];
+
+describe('conjugateSIrregular (specs/vocab-v2.md ㅅ-irregular)', () => {
+  it.each(sIrregularWords)('%s -> present %s, past %s', (word, present, past) => {
+    expect(conjugateSIrregular(word, 'present')).toBe(present);
+    expect(conjugateSIrregular(word, 'past')).toBe(past);
+  });
+
+  it('rejects a non-ㅅ-batchim stem', () => {
+    expect(() => conjugateSIrregular('먹다', 'present')).toThrow();
+  });
+});
+
+const leuIrregularWords: Array<[word: string, present: string, past: string]> = [
+  ['모르다', '몰라요', '몰랐어요'],
+  ['부르다', '불러요', '불렀어요'],
+  ['빠르다', '빨라요', '빨랐어요'],
+  ['다르다', '달라요', '달랐어요'],
+  ['고르다', '골라요', '골랐어요'],
+];
+
+describe('conjugateLeuIrregular (specs/vocab-v2.md 르-irregular)', () => {
+  it.each(leuIrregularWords)('%s -> present %s, past %s', (word, present, past) => {
+    expect(conjugateLeuIrregular(word, 'present')).toBe(present);
+    expect(conjugateLeuIrregular(word, 'past')).toBe(past);
+  });
+
+  it('rejects a non-르-final stem', () => {
+    expect(() => conjugateLeuIrregular('먹다', 'present')).toThrow();
+  });
+});
+
+const hIrregularWords: Array<[word: string, present: string, past: string]> = [
+  ['그렇다', '그래요', '그랬어요'],
+  ['빨갛다', '빨개요', '빨갰어요'],
+  ['파랗다', '파래요', '파랬어요'],
+  ['노랗다', '노래요', '노랬어요'],
+  ['하얗다', '하얘요', '하얬어요'],
+];
+
+describe('conjugateHIrregularDescriptive (specs/vocab-v2.md ㅎ-irregular)', () => {
+  it.each(hIrregularWords)('%s -> present %s, past %s', (word, present, past) => {
+    expect(conjugateHIrregularDescriptive(word, 'present')).toBe(present);
+    expect(conjugateHIrregularDescriptive(word, 'past')).toBe(past);
+  });
+
+  it('rejects a non-ㅎ-batchim stem', () => {
+    expect(() => conjugateHIrregularDescriptive('먹다', 'present')).toThrow();
+  });
+
+  it('rejects a regular ㅎ-final stem (v1 좋다 is not irregular)', () => {
+    // 좋다's medial is ㅗ, which has no entry in the ㅎ-irregular vowel-merge
+    // table (only ㅏ/ㅓ/ㅑ do) — asserts this function can't silently
+    // mishandle it even if it were ever called directly.
+    expect(() => conjugateHIrregularDescriptive('좋다', 'present')).toThrow();
+  });
+});
+
+const euContractionWords: Array<[word: string, present: string, past: string]> = [
+  ['쓰다', '써요', '썼어요'],
+  ['크다', '커요', '컸어요'],
+  ['아프다', '아파요', '아팠어요'],
+  ['바쁘다', '바빠요', '바빴어요'],
+  ['기쁘다', '기뻐요', '기뻤어요'],
+  ['고프다', '고파요', '고팠어요'],
+];
+
+describe('conjugateEuContraction (specs/vocab-v2.md ㅡ-contraction)', () => {
+  it.each(euContractionWords)('%s -> present %s, past %s', (word, present, past) => {
+    expect(conjugateEuContraction(word, 'present')).toBe(present);
+    expect(conjugateEuContraction(word, 'past')).toBe(past);
+  });
+
+  it('rejects a non-open-ㅡ stem', () => {
+    expect(() => conjugateEuContraction('먹다', 'present')).toThrow();
+  });
+});
+
 describe('conjugate (auto-detecting dispatcher)', () => {
-  const allWords = [...group1Words, ...group2Words, ...group3Words, ...group4Words];
+  const allWords = [
+    ...group1Words,
+    ...group2Words,
+    ...group3Words,
+    ...group4Words,
+    ...dIrregularWords,
+    ...bIrregularWords,
+    ...sIrregularWords,
+    ...leuIrregularWords,
+    ...hIrregularWords,
+    ...euContractionWords,
+  ];
 
   it.each(allWords)('%s matches its pattern-group function (present %s, past %s)', (word, present, past) => {
     expect(conjugate(word, 'present')).toBe(present);

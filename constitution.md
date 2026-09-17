@@ -329,12 +329,23 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       `build` (all clean), and a running `next dev` serving with no
       compile errors. Hands-on browser pass (modal appearance, first-visit
       auto-open, Escape/button-click interaction) confirmed by the user
-- [ ] **Level 2 vocab: irregular conjugation classes** — ㄷ/ㅂ/ㅅ/르/ㅎ and
-      ㅡ-contraction, the words excluded from v1 (`specs/vocab-v1.md`'s
-      excluded list), added as a distinct Level 2 unlocked after Level 1
-      (v1's 62-word regular set) — replaces the old vague "explicit
-      levels" item with a concrete two-level structure (see
-      `specs/vocab-v2.md`)
+- [x] **Level 2 vocab: irregular conjugation classes** — ㄷ/ㅂ/ㅅ/르/ㅎ and
+      ㅡ-contraction, the 34 words excluded from v1 (`specs/vocab-v1.md`'s
+      excluded list), added as `VOCAB_LEVEL_2` with a dedicated
+      conjugation function per class (including the 돕다 sub-exception
+      within ㅂ-irregular) — replaces the old vague "explicit levels" item
+      with a concrete two-level structure (see `specs/vocab-v2.md` for the
+      full rule table). Level 2 stays out of the active pool until every
+      one of Level 1's 62 words has reached past-stage at least once in
+      the dictionary, then unlocks and mixes in via the existing pool
+      replacement logic; a toast announces the unlock. Verified via
+      `npm run test` (267 passing — 96 exhaustive per-word conjugation
+      assertions plus the v1 suite, unchanged), `typecheck`, `build` (all
+      clean), and a running `next dev` with no compile errors. The
+      unlock's actual in-game feel (pacing, toast timing, pool mixing
+      once triggered) hasn't been confirmed by hand yet — that requires
+      actually completing all 62 Level 1 words in a real session, which
+      wasn't done this session
 - [ ] Additional tenses/endings (future tense, connective forms, etc.)
 - [ ] **Hard mode** — a Normal-mode difficulty modifier built around
       smaller/faster board pressure (see `specs/game-modes-v2.md`)

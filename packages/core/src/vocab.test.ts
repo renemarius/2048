@@ -1,10 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { conjugate } from './conjugate';
-import { VOCAB } from './vocab';
+import { conjugate, isIrregular } from './conjugate';
+import { VOCAB, VOCAB_LEVEL_1, VOCAB_LEVEL_2 } from './vocab';
 
 describe('VOCAB', () => {
-  it('has exactly the 62 words specified in specs/vocab-v1.md', () => {
-    expect(VOCAB).toHaveLength(62);
+  it('has exactly the 62 Level 1 words specified in specs/vocab-v1.md', () => {
+    expect(VOCAB_LEVEL_1).toHaveLength(62);
+  });
+
+  it('has exactly the 34 Level 2 words specified in specs/vocab-v2.md', () => {
+    expect(VOCAB_LEVEL_2).toHaveLength(34);
+  });
+
+  it('is Level 1 followed by Level 2, with no overlap', () => {
+    expect(VOCAB).toEqual([...VOCAB_LEVEL_1, ...VOCAB_LEVEL_2]);
+  });
+
+  it('every Level 2 word is tagged irregular, and no Level 1 word is', () => {
+    for (const { word } of VOCAB_LEVEL_1) {
+      expect(isIrregular(word)).toBe(false);
+    }
+    for (const { word } of VOCAB_LEVEL_2) {
+      expect(isIrregular(word)).toBe(true);
+    }
   });
 
   it('has no duplicate words', () => {

@@ -6,6 +6,7 @@ import type { Board, DictionaryEntry, Direction, Pool, Tile as CoreTile, VocabEn
 import {
   BOARD_SIZE,
   VOCAB,
+  VOCAB_LEVEL_1,
   advancePool,
   clearCompletedTiles,
   createEmptyBoard,
@@ -199,6 +200,19 @@ function vocabForWords(words: readonly string[]): VocabEntry[] {
   return VOCAB.filter((entry) => wordSet.has(entry.word));
 }
 
+// Level 2 gating (specs/vocab-v2.md, constitution.md v2 checklist): the 34
+// irregular-conjugation words stay out of the pool entirely until every one
+// of Level 1's 62 regular words has reached past-stage at least once in the
+// permanent dictionary — full completion, not a partial threshold.
+function isLevel1Complete(dictionary: readonly DictionaryEntry[]): boolean {
+  const learned = new Set(dictionary.map((entry) => entry.word));
+  return VOCAB_LEVEL_1.every((entry) => learned.has(entry.word));
+}
+
+function unlockedVocab(dictionary: readonly DictionaryEntry[]): VocabEntry[] {
+  return isLevel1Complete(dictionary) ? VOCAB : VOCAB_LEVEL_1;
+}
+
 function tileClassName(tile: CoreTile, isClearing: boolean): string {
   const kindClass =
     tile.kind === 'stem'
@@ -233,8 +247,8 @@ function flattenBoard(board: Board): PositionedTile[] {
   return tiles;
 }
 
-function newSession(): SessionState {
-  const pool = createPool(VOCAB, POOL_SIZE);
+function newSession(vocab: readonly VocabEntry[]): SessionState {
+  const pool = createPool(vocab, POOL_SIZE);
   const board = createInitialBoard(vocabForWords(pool.active));
   return { board, score: 0, pool };
 }
@@ -251,6 +265,7 @@ export function Game() {
   const [dictionaryOpen, setDictionaryOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [newWordToast, setNewWordToast] = useState<string[] | null>(null);
+  const [level2Toast, setLevel2Toast] = useState(false);
   const toastTimeoutRef = useRef<number | null>(null);
 
   // Refs mirror the latest committed state so the delayed fade-out/clear
@@ -282,6 +297,7 @@ export function Game() {
   // client-side only — the server/first-paint render always shows the
   // empty board so there's no hydration mismatch.
   useEffect(() => {
+    const initialDictionary = loadDictionary();
     const saved = loadSession();
     if (saved) {
       setBoard(saved.board);
@@ -289,13 +305,13 @@ export function Game() {
       setPool(saved.pool);
       setGameOver(isGameOver(saved.board));
     } else {
-      const session = newSession();
+      const session = newSession(unlockedVocab(initialDictionary));
       setBoard(session.board);
       setPool(session.pool);
       persistSession(session);
     }
     setBestScore(loadBestScore());
-    setDictionary(loadDictionary());
+    setDictionary(initialDictionary);
     setHydrated(true);
 
     // First-ever visit (specs/ui-v2.md "Rules panel"): auto-open once so a
@@ -319,7 +335,7 @@ export function Game() {
   // the word from the pool, clear its tiles, and spawn the replacement
   // word's stem. Reads current state via refs, not closure values, so it
   // stays correct even if the player keeps moving during the delay.
-  const scheduleCompletion = useCallback((words: string[]) => {
+  const scheduleCompletion = useCallback((words: string[], vocab: readonly VocabEntry[]) => {
     window.setTimeout(() => {
       if (!isMountedRef.current) return;
       setClearingWords((prev) => new Set([...prev, ...words]));
@@ -327,7 +343,7 @@ export function Game() {
       window.setTimeout(() => {
         if (!isMountedRef.current) return;
 
-        const { pool: nextPool, added } = advancePool(poolRef.current, words, VOCAB);
+        const { pool: nextPool, added } = advancePool(poolRef.current, words, vocab);
         let updatedBoard = clearCompletedTiles(boardRef.current, words);
         for (const word of added) {
           updatedBoard = spawnTile(updatedBoard, vocabForWords([word]));
@@ -360,6 +376,8 @@ export function Game() {
       const nextBoard = spawnTile(result.board, vocabForWords(spawnWords));
       const dictUpdate = updateDictionary(dictionary, result.completedWords);
       const nextScore = score + result.scoreDelta + dictUpdate.bonus;
+      const justUnlockedLevel2 =
+        !isLevel1Complete(dictionary) && isLevel1Complete(dictUpdate.dictionary);
 
       setBoard(nextBoard);
       setScore(nextScore);
@@ -370,7 +388,13 @@ export function Game() {
         persistDictionary(dictUpdate.dictionary);
       }
 
-      if (dictUpdate.newWords.length > 0) {
+      if (justUnlockedLevel2) {
+        setLevel2Toast(true);
+        if (toastTimeoutRef.current !== null) window.clearTimeout(toastTimeoutRef.current);
+        toastTimeoutRef.current = window.setTimeout(() => {
+          setLevel2Toast(false);
+        }, TOAST_DURATION_MS);
+      } else if (dictUpdate.newWords.length > 0) {
         setNewWordToast(dictUpdate.newWords);
         if (toastTimeoutRef.current !== null) window.clearTimeout(toastTimeoutRef.current);
         toastTimeoutRef.current = window.setTimeout(() => {
@@ -388,7 +412,7 @@ export function Game() {
       }
 
       if (result.completedWords.length > 0) {
-        scheduleCompletion(result.completedWords);
+        scheduleCompletion(result.completedWords, unlockedVocab(dictUpdate.dictionary));
       }
     },
     [board, score, bestScore, gameOver, pool, dictionary, scheduleCompletion],
@@ -432,7 +456,7 @@ export function Game() {
   }, [rulesOpen]);
 
   function handleRestart() {
-    const session = newSession();
+    const session = newSession(unlockedVocab(dictionary));
     setBoard(session.board);
     setScore(0);
     setPool(session.pool);
@@ -483,6 +507,14 @@ export function Game() {
           </button>
         </div>
       </div>
+
+      {level2Toast && (
+        <div className={styles.toast} role="status">
+          <div className={styles.toastLine}>
+            <strong>Level 2 unlocked!</strong> Irregular-conjugation words will now show up.
+          </div>
+        </div>
+      )}
 
       {newWordToast && newWordToast.length > 0 && (
         <div className={styles.toast} role="status">

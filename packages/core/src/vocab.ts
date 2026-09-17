@@ -1,8 +1,11 @@
-// Full v1 vocabulary — specs/vocab-v1.md. Word/meaning pairs, plus an
-// example sentence per word for the dictionary panel (constitution.md
-// Section 3.3 / Open Decisions Log). Each word's conjugation pattern
-// group is auto-detected by conjugate() from the word's own shape, not
-// stored here.
+// Vocabulary — specs/vocab-v1.md (Level 1, 62 regular words) and
+// specs/vocab-v2.md (Level 2, 34 irregular words). Word/meaning pairs,
+// plus an example sentence per word for the dictionary panel
+// (constitution.md Section 3.3 / Open Decisions Log). Each Level 1 word's
+// pattern group is auto-detected by conjugate() from its own shape;
+// each Level 2 word's irregular class is instead looked up by word in
+// conjugate.ts's IRREGULAR_CLASS_BY_WORD, since irregularity can't be
+// detected from shape alone (see specs/vocab-v2.md).
 //
 // exampleSentence uses the word's own present-polite form (the exact
 // surface form conjugate() produces — see conjugate.test.ts) so the
@@ -16,7 +19,7 @@ export interface VocabEntry {
   exampleTranslation: string;
 }
 
-export const VOCAB: VocabEntry[] = [
+export const VOCAB_LEVEL_1: VocabEntry[] = [
   // Group 1 — batchim-final (27)
   { word: '먹다', meaning: 'eat', exampleSentence: '저는 아침을 먹어요.', exampleTranslation: 'I eat breakfast.' },
   { word: '읽다', meaning: 'read', exampleSentence: '저는 책을 읽어요.', exampleTranslation: 'I read a book.' },
@@ -87,3 +90,56 @@ export const VOCAB: VocabEntry[] = [
   { word: '숙제하다', meaning: 'do homework', exampleSentence: '저는 매일 숙제해요.', exampleTranslation: 'I do homework every day.' },
   { word: '필요하다', meaning: 'need/be necessary', exampleSentence: '저는 시간이 필요해요.', exampleTranslation: 'I need time.' },
 ];
+
+// Level 2 — irregular conjugation classes (specs/vocab-v2.md). Which
+// irregular class each word belongs to is tagged in conjugate.ts, not
+// here — this table only needs word/meaning/examples, same as Level 1.
+export const VOCAB_LEVEL_2: VocabEntry[] = [
+  // ㄷ-irregular (4)
+  { word: '듣다', meaning: 'hear/listen', exampleSentence: '저는 음악을 들어요.', exampleTranslation: 'I listen to music.' },
+  { word: '걷다', meaning: 'walk', exampleSentence: '저는 공원에서 걸어요.', exampleTranslation: 'I walk in the park.' },
+  { word: '묻다', meaning: 'ask', exampleSentence: '저는 길을 물어요.', exampleTranslation: 'I ask for directions.' },
+  { word: '싣다', meaning: 'load', exampleSentence: '저는 짐을 차에 실어요.', exampleTranslation: 'I load the luggage into the car.' },
+
+  // ㅂ-irregular (9)
+  { word: '춥다', meaning: 'cold', exampleSentence: '오늘 날씨가 추워요.', exampleTranslation: 'The weather is cold today.' },
+  { word: '덥다', meaning: 'hot', exampleSentence: '여름에 날씨가 더워요.', exampleTranslation: 'The weather is hot in summer.' },
+  { word: '쉽다', meaning: 'easy', exampleSentence: '이 문제는 쉬워요.', exampleTranslation: 'This problem is easy.' },
+  { word: '어렵다', meaning: 'difficult', exampleSentence: '한국어는 어려워요.', exampleTranslation: 'Korean is difficult.' },
+  { word: '가깝다', meaning: 'close', exampleSentence: '학교가 집에서 가까워요.', exampleTranslation: 'The school is close to home.' },
+  { word: '무겁다', meaning: 'heavy', exampleSentence: '이 가방이 무거워요.', exampleTranslation: 'This bag is heavy.' },
+  { word: '귀엽다', meaning: 'cute', exampleSentence: '그 강아지가 귀여워요.', exampleTranslation: 'That puppy is cute.' },
+  { word: '눕다', meaning: 'lie down', exampleSentence: '저는 침대에 누워요.', exampleTranslation: 'I lie down on the bed.' },
+  { word: '돕다', meaning: 'help', exampleSentence: '저는 친구를 도와요.', exampleTranslation: 'I help my friend.' },
+
+  // ㅅ-irregular (5)
+  { word: '짓다', meaning: 'build', exampleSentence: '저는 집을 지어요.', exampleTranslation: 'I build a house.' },
+  { word: '낫다', meaning: 'better/cure', exampleSentence: '감기가 나아요.', exampleTranslation: 'The cold is getting better.' },
+  { word: '붓다', meaning: 'pour', exampleSentence: '저는 물을 부어요.', exampleTranslation: 'I pour water.' },
+  { word: '젓다', meaning: 'stir', exampleSentence: '저는 커피를 저어요.', exampleTranslation: 'I stir the coffee.' },
+  { word: '긋다', meaning: 'draw a line', exampleSentence: '저는 줄을 그어요.', exampleTranslation: 'I draw a line.' },
+
+  // 르-irregular (5)
+  { word: '모르다', meaning: 'not know', exampleSentence: '저는 그 사람을 몰라요.', exampleTranslation: "I don't know that person." },
+  { word: '부르다', meaning: 'call/sing', exampleSentence: '저는 노래를 불러요.', exampleTranslation: 'I sing a song.' },
+  { word: '빠르다', meaning: 'fast', exampleSentence: '이 기차가 빨라요.', exampleTranslation: 'This train is fast.' },
+  { word: '다르다', meaning: 'different', exampleSentence: '이 두 가방이 달라요.', exampleTranslation: 'These two bags are different.' },
+  { word: '고르다', meaning: 'choose', exampleSentence: '저는 옷을 골라요.', exampleTranslation: 'I choose clothes.' },
+
+  // ㅎ-irregular, descriptive (5)
+  { word: '그렇다', meaning: 'be so', exampleSentence: '네, 그래요.', exampleTranslation: "Yes, that's right." },
+  { word: '빨갛다', meaning: 'red', exampleSentence: '사과가 빨개요.', exampleTranslation: 'The apple is red.' },
+  { word: '파랗다', meaning: 'blue', exampleSentence: '하늘이 파래요.', exampleTranslation: 'The sky is blue.' },
+  { word: '노랗다', meaning: 'yellow', exampleSentence: '바나나가 노래요.', exampleTranslation: 'The banana is yellow.' },
+  { word: '하얗다', meaning: 'white', exampleSentence: '눈이 하얘요.', exampleTranslation: 'The snow is white.' },
+
+  // ㅡ-contraction (6)
+  { word: '쓰다', meaning: 'write/use', exampleSentence: '저는 편지를 써요.', exampleTranslation: 'I write a letter.' },
+  { word: '크다', meaning: 'big', exampleSentence: '이 집이 커요.', exampleTranslation: 'This house is big.' },
+  { word: '아프다', meaning: 'sick', exampleSentence: '저는 배가 아파요.', exampleTranslation: 'My stomach hurts.' },
+  { word: '바쁘다', meaning: 'busy', exampleSentence: '저는 요즘 바빠요.', exampleTranslation: "I'm busy these days." },
+  { word: '기쁘다', meaning: 'happy', exampleSentence: '만나서 기뻐요.', exampleTranslation: "I'm happy to meet you." },
+  { word: '고프다', meaning: 'hungry', exampleSentence: '저는 배가 고파요.', exampleTranslation: "I'm hungry." },
+];
+
+export const VOCAB: VocabEntry[] = [...VOCAB_LEVEL_1, ...VOCAB_LEVEL_2];
