@@ -276,9 +276,8 @@ stem→word→conjugated-word chain instead.
       real browser yet
 - [x] Game-over detection works (no legal moves remain) — implemented,
       unit tested, and wired into the UI (game-over modal + restart)
-- [ ] Played end-to-end by you, by hand, and it's actually fun / correct
-      — confirmed for the base gameplay loop; the active-pool rework
-      (this session) still needs your hands-on pass before this checks off
+- [x] Played end-to-end by you, by hand, and it's actually fun / correct
+      — confirmed, including the active-pool rework and v1.5 additions
 - [ ] Deployed and reachable on a Vercel URL
 
 ### v1.5 — Learning-optimized UX (session addition, explicit jump-ahead)
@@ -314,10 +313,9 @@ playtest/deploy checklist items first. See Open Decisions Log below.
 - [x] Verified via `npm run test` (189 passing core tests), `npm run
       typecheck`, `npm run build` (all clean), and a running `next dev`
       serving the updated page with no compile errors
-- [ ] Hands-on browser pass: drawer slide animation, speaker button audio
+- [x] Hands-on browser pass: drawer slide animation, speaker button audio
       actually audible, review-word resurfacing visibly happening across a
-      real play session — not yet confirmed by hand (no browser tool this
-      session, same caveat as the rest of v1's UI-facing boxes)
+      real play session — confirmed by hand
 
 ### v2 — Educational depth (future)
 
@@ -345,8 +343,8 @@ between sessions:
 - **Dictionary persistence feature:** resolved — implemented as the
   permanent word dictionary, +50 one-time bonus, "new word" toast, and
   the tablet/paper-skinned dictionary panel (see the v1 checklist above).
-  Still needs a hands-on browser pass (toast appearance/timing, both theme
-  skins) since no browser tool is available this session.
+  Hands-on browser pass (toast appearance/timing, both theme skins)
+  confirmed.
 - **Audience-focused learning UX (v1.5, this session):** the user
   reframed priorities around the actual target audience (A1–A2 Korean
   learners) before the last two v1 boxes (hands-on playtest, Vercel
