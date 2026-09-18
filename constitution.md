@@ -356,8 +356,18 @@ playtest/deploy checklist items first. See Open Decisions Log below.
 - [ ] **Per-mode scoring** — best score now tracked separately for
       Normal, Hard, and Concentration instead of one shared best score
       (see `specs/game-modes-v2.md`)
-- [ ] Enhanced dictionary UI — search, filter, alphabetical sort, and a
-      bookmark/star tab for saved words (see `specs/ui-v2.md`)
+- [x] Enhanced dictionary UI — search (word or meaning), a filter row
+      (All / Level 1 / Level 2 / ★ Starred), alphabetical sort (Korean/
+      Hangul order, toggled against the existing "order learned" default),
+      and a bookmark/star toggle per row (see `specs/ui-v2.md`). Bookmarks
+      persist as a new `bookmarked` field on `DictionaryEntry`
+      (`packages/core`), carried through `updateDictionary` and changed
+      only by the new `toggleBookmark`, with back-compat defaulting for
+      dictionaries saved before this field existed. Verified via
+      `npm run test` (272 passing — new `toggleBookmark`/bookmark-carry
+      tests, rest unchanged), `typecheck`, `build` (all clean), and a
+      fresh `next dev` with no compile errors. Not yet confirmed by hand:
+      actually using search/filter/sort/bookmark in a real browser
 - [x] Dictionary panel color fix (Classic theme) — the "digital tablet"
       bezel/screen now reuse Classic's own existing tokens (`--board-bg`
       for the bezel, `--tile-stem`/`--tile-stem-text` for the screen/text)

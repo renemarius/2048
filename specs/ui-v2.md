@@ -26,13 +26,18 @@ Panel sections), add:
 
 - **Search** — filter the list by Korean word or English meaning as the
   player types
-- **Filter** — OPEN on exactly what dimensions (by pattern group? by
-  mastery-count threshold? by bookmarked-only?) beyond search
-- **Alphabetical sort** — an explicit sort option (v1.5 is "order
-  learned" only); OPEN whether this sorts by Korean (Hangul) order or by
-  the English meaning
-- **Bookmark/star feature** — a star toggle per dictionary row, plus a
-  dedicated tab/filter within the drawer showing only starred words
+- **Filter** — DECIDED: a row of four pills, **All / Level 1 / Level 2 /
+  ★ Starred**, folding the bookmark view into the same control rather
+  than a separate dedicated tab (kept the drawer to one filter row instead
+  of two, and Level became the natural dimension once Level 2 shipped)
+- **Alphabetical sort** — DECIDED: Korean (Hangul) order via
+  `word.localeCompare(other, 'ko')`, toggled against the existing "order
+  learned" default (a `<select>`, not a separate control) — matches how a
+  learner would look words up in a Korean dictionary
+- **Bookmark/star feature** — DECIDED: a star toggle per dictionary row
+  (☆/★), persisted as a `bookmarked` field on `DictionaryEntry`
+  (`packages/core/src/dictionary.ts`), changed only by the new
+  `toggleBookmark` function
 
 These are additive to the existing row content (meaning, example
 sentence, mastery count, speaker button) — no existing v1.5 row data is

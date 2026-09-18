@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { Board, DictionaryEntry, Direction, Pool, Tile as CoreTile, VocabEntry } from 'core';
 import {
@@ -16,6 +16,7 @@ import {
   move,
   pickReviewWord,
   spawnTile,
+  toggleBookmark,
   updateDictionary,
   NEW_WORD_BONUS,
 } from 'core';
@@ -131,7 +132,7 @@ function loadDictionary(): DictionaryEntry[] {
     // Back-compat: sessions saved before mastery counts existed stored
     // plain `string[]` — treat each as having been completed once.
     if (parsed.every((entry) => typeof entry === 'string')) {
-      return parsed.map((word) => ({ word, count: 1 }));
+      return parsed.map((word) => ({ word, count: 1, bookmarked: false }));
     }
     if (
       parsed.every(
@@ -139,7 +140,11 @@ function loadDictionary(): DictionaryEntry[] {
           entry && typeof entry.word === 'string' && typeof entry.count === 'number',
       )
     ) {
-      return parsed as DictionaryEntry[];
+      // Back-compat: sessions saved before bookmarks existed are missing
+      // the field entirely — default to unstarred.
+      return (parsed as Array<Partial<DictionaryEntry> & { word: string; count: number }>).map(
+        (entry) => ({ word: entry.word, count: entry.count, bookmarked: entry.bookmarked ?? false }),
+      );
     }
     return [];
   } catch {
@@ -213,6 +218,42 @@ function unlockedVocab(dictionary: readonly DictionaryEntry[]): VocabEntry[] {
   return isLevel1Complete(dictionary) ? VOCAB : VOCAB_LEVEL_1;
 }
 
+// Dictionary UI v2 (specs/ui-v2.md): search, filter, sort, bookmarks.
+const LEVEL_1_WORDS = new Set(VOCAB_LEVEL_1.map((entry) => entry.word));
+
+type DictionaryFilter = 'all' | 'level1' | 'level2' | 'starred';
+type DictionarySort = 'learned' | 'alpha';
+
+function filterAndSortDictionary(
+  dictionary: readonly DictionaryEntry[],
+  query: string,
+  filter: DictionaryFilter,
+  sort: DictionarySort,
+): DictionaryEntry[] {
+  let list = dictionary as DictionaryEntry[];
+
+  if (filter === 'level1') list = list.filter((entry) => LEVEL_1_WORDS.has(entry.word));
+  else if (filter === 'level2') list = list.filter((entry) => !LEVEL_1_WORDS.has(entry.word));
+  else if (filter === 'starred') list = list.filter((entry) => entry.bookmarked);
+
+  const trimmedQuery = query.trim().toLowerCase();
+  if (trimmedQuery) {
+    list = list.filter(
+      (entry) =>
+        entry.word.includes(query.trim()) ||
+        (vocabEntryFor(entry.word)?.meaning ?? '').toLowerCase().includes(trimmedQuery),
+    );
+  }
+
+  if (sort === 'alpha') {
+    // Korean (Hangul) order (specs/ui-v2.md) — matches how a learner would
+    // look words up in a Korean dictionary.
+    list = [...list].sort((a, b) => a.word.localeCompare(b.word, 'ko'));
+  }
+
+  return list;
+}
+
 function tileClassName(tile: CoreTile, isClearing: boolean): string {
   const kindClass =
     tile.kind === 'stem'
@@ -263,6 +304,9 @@ export function Game() {
   const [clearingWords, setClearingWords] = useState<Set<string>>(new Set());
   const [dictionary, setDictionary] = useState<DictionaryEntry[]>([]);
   const [dictionaryOpen, setDictionaryOpen] = useState(false);
+  const [dictionaryQuery, setDictionaryQuery] = useState('');
+  const [dictionaryFilter, setDictionaryFilter] = useState<DictionaryFilter>('all');
+  const [dictionarySort, setDictionarySort] = useState<DictionarySort>('learned');
   const [rulesOpen, setRulesOpen] = useState(false);
   const [newWordToast, setNewWordToast] = useState<string[] | null>(null);
   const [level2Toast, setLevel2Toast] = useState(false);
@@ -465,6 +509,17 @@ export function Game() {
     persistSession(session);
   }
 
+  function handleToggleBookmark(word: string) {
+    const next = toggleBookmark(dictionary, word);
+    setDictionary(next);
+    persistDictionary(next);
+  }
+
+  const visibleDictionary = useMemo(
+    () => filterAndSortDictionary(dictionary, dictionaryQuery, dictionaryFilter, dictionarySort),
+    [dictionary, dictionaryQuery, dictionaryFilter, dictionarySort],
+  );
+
   const tiles = hydrated ? flattenBoard(board) : [];
 
   return (
@@ -621,18 +676,81 @@ export function Game() {
                   ×
                 </button>
               </div>
+
+              {dictionary.length > 0 && (
+                <div className={styles.dictionaryControls}>
+                  <input
+                    type="text"
+                    className={styles.dictionarySearch}
+                    placeholder="Search word or meaning"
+                    value={dictionaryQuery}
+                    onChange={(event) => setDictionaryQuery(event.target.value)}
+                    aria-label="Search dictionary"
+                    tabIndex={dictionaryOpen ? 0 : -1}
+                  />
+                  <div className={styles.dictionaryFilters} role="tablist" aria-label="Filter dictionary">
+                    {(
+                      [
+                        ['all', 'All'],
+                        ['level1', 'Level 1'],
+                        ['level2', 'Level 2'],
+                        ['starred', '★ Starred'],
+                      ] as Array<[DictionaryFilter, string]>
+                    ).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="tab"
+                        aria-selected={dictionaryFilter === value}
+                        className={`${styles.dictionaryFilterButton} ${
+                          dictionaryFilter === value ? styles.dictionaryFilterButtonActive : ''
+                        }`}
+                        onClick={() => setDictionaryFilter(value)}
+                        tabIndex={dictionaryOpen ? 0 : -1}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <label className={styles.dictionarySortLabel}>
+                    Sort
+                    <select
+                      className={styles.dictionarySortSelect}
+                      value={dictionarySort}
+                      onChange={(event) => setDictionarySort(event.target.value as DictionarySort)}
+                      tabIndex={dictionaryOpen ? 0 : -1}
+                    >
+                      <option value="learned">Order learned</option>
+                      <option value="alpha">A → Z</option>
+                    </select>
+                  </label>
+                </div>
+              )}
+
               <div className={styles.dictionaryListWrap}>
                 {dictionary.length === 0 ? (
                   <p className={styles.dictionaryEmpty}>
                     No words learned yet — conjugate one to its past form to add it here.
                   </p>
+                ) : visibleDictionary.length === 0 ? (
+                  <p className={styles.dictionaryEmpty}>No words match.</p>
                 ) : (
                   <ul className={styles.dictionaryList}>
-                    {dictionary.map(({ word, count }) => {
+                    {visibleDictionary.map(({ word, count, bookmarked }) => {
                       const entry = vocabEntryFor(word);
                       return (
                         <li key={word} className={styles.dictionaryRow}>
                           <div className={styles.dictionaryRowTop}>
+                            <button
+                              type="button"
+                              className={styles.bookmarkButton}
+                              onClick={() => handleToggleBookmark(word)}
+                              aria-label={bookmarked ? `Unstar ${word}` : `Star ${word}`}
+                              aria-pressed={bookmarked}
+                              tabIndex={dictionaryOpen ? 0 : -1}
+                            >
+                              {bookmarked ? '★' : '☆'}
+                            </button>
                             <span className={styles.dictionaryWord}>{word}</span>
                             <button
                               type="button"
