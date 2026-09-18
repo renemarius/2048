@@ -356,9 +356,8 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       resolved this session (see Open Decisions Log). Verified via
       `npm run test` (299 passing — 24 new tests across `hardmode.test.ts`
       and new blocked-cell cases in `board.test.ts`), `typecheck`, `build`
-      (all clean), and a running `next dev` serving the mode-switcher UI
-      with no compile errors. Not yet confirmed by hand: the actual
-      difficulty feel and relocation cadence in real play
+      (all clean), and a hands-on browser pass — the user confirmed the
+      difficulty feel and relocation cadence play well
 - [x] **Concentration mode** — a separate memory-match game mode
       (`apps/web/app/concentration.tsx`, `packages/core/src/concentration.ts`):
       flip tiles, match a Korean word to its English meaning, drawing
@@ -366,10 +365,11 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       grid; an empty state below 8 learned words points back to Normal
       mode). Has its own session score and best-score track; correct
       matches stay purely session-scored, per the resolved OPEN decision
-      in `specs/game-modes-v2.md`. Verified via
-      `npm run test`, `typecheck`, `build` (all clean), running `next dev`
-      with no compile errors. Not yet confirmed by hand: the flip/match/
-      mismatch interaction and empty-state copy in a real browser
+      in `specs/game-modes-v2.md`. Verified via `npm run test`, `typecheck`,
+      `build` (all clean), and a hands-on browser pass — caught and fixed
+      an invalid button-in-button nesting on matched cards' speaker button
+      (was throwing a hydration error) that automated checks couldn't have
+      caught; confirmed working after the fix
 - [x] **Per-mode scoring** — best score now tracked separately for
       Normal, Hard, and Concentration instead of one shared best score
       (`apps/web/app/storage-keys.ts`'s `bestScoreKey(mode)`); Normal

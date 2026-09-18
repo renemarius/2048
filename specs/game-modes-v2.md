@@ -79,10 +79,16 @@ across all three modes — only best-score tracking splits per mode.
 ## Implementation status
 
 All three checklist items (Hard mode, Concentration mode, per-mode
-scoring) are implemented and covered by `packages/core` unit tests
+scoring) are implemented, covered by `packages/core` unit tests
 (`hardmode.test.ts`, `concentration.test.ts`, plus the blocked-cell cases
-added to `board.test.ts`). Not yet confirmed by hand: Hard mode's actual
-difficulty feel (spawn-2 + relocating dead zone together), the
-relocation cadence "reading" as fair rather than jarring, and
-Concentration's flip/match/mismatch interaction and empty-state copy in
-a real browser — no browser automation tool was available this session.
+added to `board.test.ts`), and confirmed by a hands-on browser playtest —
+Hard mode's difficulty feel (spawn-2 + relocating dead zone together) and
+Concentration's flip/match/mismatch interaction both play as intended.
+
+The playtest caught one bug automated checks couldn't: Concentration's
+matched-card speaker button was rendered as a `<button>` nested inside
+the card's own `<button>` — invalid HTML, threw a hydration error the
+moment a card was actually matched in-browser. Fixed by making the card
+and its speaker button sibling elements inside a positioning wrapper
+`<div>` (`apps/web/app/concentration.tsx`, `.concentrationCardWrap` in
+`game.module.css`).
