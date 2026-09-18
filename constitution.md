@@ -348,7 +348,7 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       once triggered) hasn't been confirmed by hand yet — that requires
       actually completing all 62 Level 1 words in a real session, which
       wasn't done this session
-- [ ] **Additional tenses — Level 3: future tense** — scope, merge model,
+- [x] **Additional tenses — Level 3: future tense** — scope, merge model,
       unlock gate, and the full per-class grammar rule table are DECIDED
       and implemented, see `specs/tenses-v2.md`: `ConjugationStage`/`Tense`
       now include `'future'`; `conjugate()` dispatches to dedicated
@@ -365,11 +365,11 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       `npm run test` (503 passing — 96-word exhaustive future-conjugation
       suite plus new board.ts merge/gating tests, rest unchanged),
       `typecheck`, `build` (all clean), and a running `next dev` serving
-      with no compile errors. **Not yet confirmed by hand**: actually
-      playing to a future-tense merge, watching the Level 3 unlock toast
-      fire (requires completing all 96 words in a real session, which
-      wasn't done this session), and reading the updated rules panel in
-      the browser. Connective forms (-고, -아서/어서, -지만, -(으)면, -는데,
+      with no compile errors. Hands-on browser pass confirmed by the user
+      — playtested with all 96 words already in the dictionary, so Level 3
+      was unlocked and a real stem+future-ending merge, the 미래 tile, and
+      the unlock toast were all exercised directly rather than inferred
+      from code. Connective forms (-고, -아서/어서, -지만, -(으)면, -는데,
       etc.) are explicitly cut from this item — they're sentence-linking,
       not sentence-final, so they don't fit the stem+ending merge model at
       all; tracked as a separate, unscoped backlog item below instead of
