@@ -5,6 +5,11 @@ import {
   conjugateBIrregular,
   conjugateDIrregular,
   conjugateEuContraction,
+  conjugateFutureBIrregular,
+  conjugateFutureDIrregular,
+  conjugateFutureHIrregular,
+  conjugateFutureRegular,
+  conjugateFutureSIrregular,
   conjugateHada,
   conjugateHIrregularDescriptive,
   conjugateLeuIrregular,
@@ -291,5 +296,218 @@ describe('conjugate (auto-detecting dispatcher)', () => {
   it.each(allWords)('%s matches its pattern-group function (present %s, past %s)', (word, present, past) => {
     expect(conjugate(word, 'present')).toBe(present);
     expect(conjugate(word, 'past')).toBe(past);
+  });
+});
+
+// Level 3: future tense (-(으)ㄹ 거예요, specs/tenses-v2.md). Every word
+// from both vocab levels, exercised exhaustively against the spec's
+// grammar table — same correctness bar as present/past above
+// (constitution.md Principle 1). Grouped by which future-tense rule
+// actually applies (not by v1/v2's present/past grouping), since future
+// cuts across those groups differently — e.g. Group 2/3/4, 르-irregular,
+// and ㅡ-contraction all collapse into the same "regular open-vowel"
+// rule here, while native ㄹ-batchim words split off from the rest of
+// Group 1.
+
+const regularOpenVowelFutureWords: Array<[word: string, future: string]> = [
+  // Group 2 — open elision
+  ['가다', '갈 거예요'],
+  ['자다', '잘 거예요'],
+  ['사다', '살 거예요'],
+  ['타다', '탈 거예요'],
+  ['만나다', '만날 거예요'],
+  ['서다', '설 거예요'],
+  ['건너다', '건널 거예요'],
+  ['켜다', '켤 거예요'],
+  ['보내다', '보낼 거예요'],
+  ['지내다', '지낼 거예요'],
+  ['끝나다', '끝날 거예요'],
+  ['일어나다', '일어날 거예요'],
+  // Group 3 — open diphthong (no fusion for future — see spec)
+  ['오다', '올 거예요'],
+  ['보다', '볼 거예요'],
+  ['배우다', '배울 거예요'],
+  ['마시다', '마실 거예요'],
+  ['다니다', '다닐 거예요'],
+  ['기다리다', '기다릴 거예요'],
+  ['주다', '줄 거예요'],
+  ['나오다', '나올 거예요'],
+  // Group 4 — 하다
+  ['하다', '할 거예요'],
+  ['공부하다', '공부할 거예요'],
+  ['운동하다', '운동할 거예요'],
+  ['일하다', '일할 거예요'],
+  ['요리하다', '요리할 거예요'],
+  ['좋아하다', '좋아할 거예요'],
+  ['시작하다', '시작할 거예요'],
+  ['노래하다', '노래할 거예요'],
+  ['전화하다', '전화할 거예요'],
+  ['사랑하다', '사랑할 거예요'],
+  ['말하다', '말할 거예요'],
+  ['생각하다', '생각할 거예요'],
+  ['청소하다', '청소할 거예요'],
+  ['숙제하다', '숙제할 거예요'],
+  ['필요하다', '필요할 거예요'],
+  // 르-irregular (no doubling for future — see spec)
+  ['모르다', '모를 거예요'],
+  ['부르다', '부를 거예요'],
+  ['빠르다', '빠를 거예요'],
+  ['다르다', '다를 거예요'],
+  ['고르다', '고를 거예요'],
+  // ㅡ-contraction (no drop/fusion for future — see spec)
+  ['쓰다', '쓸 거예요'],
+  ['크다', '클 거예요'],
+  ['아프다', '아플 거예요'],
+  ['바쁘다', '바쁠 거예요'],
+  ['기쁘다', '기쁠 거예요'],
+  ['고프다', '고플 거예요'],
+];
+
+const regularBatchimFutureWords: Array<[word: string, future: string]> = [
+  ['먹다', '먹을 거예요'],
+  ['읽다', '읽을 거예요'],
+  ['받다', '받을 거예요'],
+  ['앉다', '앉을 거예요'],
+  ['웃다', '웃을 거예요'],
+  ['씻다', '씻을 거예요'],
+  ['신다', '신을 거예요'],
+  ['입다', '입을 거예요'],
+  ['닫다', '닫을 거예요'],
+  ['믿다', '믿을 거예요'],
+  ['좋다', '좋을 거예요'],
+  ['많다', '많을 거예요'],
+  ['작다', '작을 거예요'],
+  ['높다', '높을 거예요'],
+  ['짧다', '짧을 거예요'],
+  ['찾다', '찾을 거예요'],
+  ['잡다', '잡을 거예요'],
+  ['있다', '있을 거예요'],
+  ['없다', '없을 거예요'],
+  ['맞다', '맞을 거예요'],
+  ['늦다', '늦을 거예요'],
+  ['싫다', '싫을 거예요'],
+];
+
+// Native ㄹ-batchim stems (specs/tenses-v2.md): the one v1 shape that
+// future tense treats differently from every other batchim-final word —
+// the 을 is deleted outright rather than doubling up on the stem's own ㄹ.
+const nativeLFinalFutureWords: Array<[word: string, future: string]> = [
+  ['놀다', '놀 거예요'],
+  ['살다', '살 거예요'],
+  ['알다', '알 거예요'],
+  ['열다', '열 거예요'],
+  ['길다', '길 거예요'],
+];
+
+describe('conjugateFutureRegular (specs/tenses-v2.md)', () => {
+  it.each(regularOpenVowelFutureWords)('%s -> %s (open-vowel stem)', (word, future) => {
+    expect(conjugateFutureRegular(word)).toBe(future);
+  });
+
+  it.each(regularBatchimFutureWords)('%s -> %s (batchim-final stem)', (word, future) => {
+    expect(conjugateFutureRegular(word)).toBe(future);
+  });
+
+  it.each(nativeLFinalFutureWords)('%s -> %s (native ㄹ-batchim: 을 deletes)', (word, future) => {
+    expect(conjugateFutureRegular(word)).toBe(future);
+  });
+});
+
+const dIrregularFutureWords: Array<[word: string, future: string]> = [
+  ['듣다', '들을 거예요'],
+  ['걷다', '걸을 거예요'],
+  ['묻다', '물을 거예요'],
+  ['싣다', '실을 거예요'],
+];
+
+describe('conjugateFutureDIrregular (specs/tenses-v2.md) — derived ㄹ never deletes', () => {
+  it.each(dIrregularFutureWords)('%s -> %s', (word, future) => {
+    expect(conjugateFutureDIrregular(word)).toBe(future);
+  });
+
+  it('rejects a non-ㄷ-batchim stem', () => {
+    expect(() => conjugateFutureDIrregular('먹다')).toThrow();
+  });
+});
+
+const bIrregularFutureWords: Array<[word: string, future: string]> = [
+  ['춥다', '추울 거예요'],
+  ['덥다', '더울 거예요'],
+  ['쉽다', '쉬울 거예요'],
+  ['어렵다', '어려울 거예요'],
+  ['가깝다', '가까울 거예요'],
+  ['무겁다', '무거울 거예요'],
+  ['귀엽다', '귀여울 거예요'],
+  ['눕다', '누울 거예요'],
+  ['돕다', '도울 거예요'],
+];
+
+describe('conjugateFutureBIrregular (specs/tenses-v2.md) — 돕다 has no 오/와 exception here', () => {
+  it.each(bIrregularFutureWords)('%s -> %s', (word, future) => {
+    expect(conjugateFutureBIrregular(word)).toBe(future);
+  });
+
+  it('rejects a non-ㅂ-batchim stem', () => {
+    expect(() => conjugateFutureBIrregular('먹다')).toThrow();
+  });
+});
+
+const sIrregularFutureWords: Array<[word: string, future: string]> = [
+  ['짓다', '지을 거예요'],
+  ['낫다', '나을 거예요'],
+  ['붓다', '부을 거예요'],
+  ['젓다', '저을 거예요'],
+  ['긋다', '그을 거예요'],
+];
+
+describe('conjugateFutureSIrregular (specs/tenses-v2.md) — keeps 을 despite an open result', () => {
+  it.each(sIrregularFutureWords)('%s -> %s', (word, future) => {
+    expect(conjugateFutureSIrregular(word)).toBe(future);
+  });
+
+  it('rejects a non-ㅅ-batchim stem', () => {
+    expect(() => conjugateFutureSIrregular('먹다')).toThrow();
+  });
+});
+
+const hIrregularFutureWords: Array<[word: string, future: string]> = [
+  ['그렇다', '그럴 거예요'],
+  ['빨갛다', '빨갈 거예요'],
+  ['파랗다', '파랄 거예요'],
+  ['노랗다', '노랄 거예요'],
+  ['하얗다', '하얄 거예요'],
+];
+
+describe('conjugateFutureHIrregular (specs/tenses-v2.md) — no ㅐ/ㅒ merge here', () => {
+  it.each(hIrregularFutureWords)('%s -> %s', (word, future) => {
+    expect(conjugateFutureHIrregular(word)).toBe(future);
+  });
+
+  it('rejects a non-ㅎ-batchim stem', () => {
+    expect(() => conjugateFutureHIrregular('먹다')).toThrow();
+  });
+});
+
+describe('conjugate (auto-detecting dispatcher) — future tense', () => {
+  const allFutureWords = [
+    ...regularOpenVowelFutureWords,
+    ...regularBatchimFutureWords,
+    ...nativeLFinalFutureWords,
+    ...dIrregularFutureWords,
+    ...bIrregularFutureWords,
+    ...sIrregularFutureWords,
+    ...hIrregularFutureWords,
+  ];
+
+  it.each(allFutureWords)('%s -> %s', (word, future) => {
+    expect(conjugate(word, 'future')).toBe(future);
+  });
+
+  it('covers every word in both vocab levels exactly once', () => {
+    // Guards against a word silently missing from the tables above —
+    // 96 = 62 (Level 1) + 34 (Level 2), same total the v1/v2 present/past
+    // suites exercise.
+    expect(allFutureWords).toHaveLength(96);
+    expect(new Set(allFutureWords.map(([word]) => word)).size).toBe(96);
   });
 });

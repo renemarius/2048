@@ -29,10 +29,11 @@ describe('VOCAB', () => {
     expect(new Set(words).size).toBe(words.length);
   });
 
-  it('every word conjugates without throwing, in both tenses', () => {
+  it('every word conjugates without throwing, in all three tenses', () => {
     for (const { word } of VOCAB) {
       expect(() => conjugate(word, 'present')).not.toThrow();
       expect(() => conjugate(word, 'past')).not.toThrow();
+      expect(() => conjugate(word, 'future')).not.toThrow();
     }
   });
 

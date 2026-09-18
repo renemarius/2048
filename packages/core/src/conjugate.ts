@@ -1,6 +1,6 @@
 import { composeSyllable, decomposeSyllable, type JungJamo } from './hangul';
 
-export type Tense = 'present' | 'past';
+export type Tense = 'present' | 'past' | 'future';
 
 // Stems whose last vowel is ㅏ or ㅗ take the -아요/-았어요 endings;
 // every other stem takes -어요/-었어요. See specs/vocab-v1.md, Group 1.
@@ -300,14 +300,182 @@ export function conjugateEuContraction(word: string, tense: Tense): string {
   return stemHead + composeSyllable(decomposed.initial, fusedMedial, 'ㅆ') + '어요';
 }
 
+// --- Level 3: future tense (-(으)ㄹ 거예요, specs/tenses-v2.md) ----------
+//
+// Unlike present/past, future has no 아/어 vowel-harmony branch at all —
+// only a batchim/no-batchim choice. That makes it *simpler* than
+// present/past for most words, but it also means none of v1's four
+// pattern-group functions or v2's irregular present/past transforms
+// (elision, diphthong fusion, 르-doubling, ㅡ-fusion, the ㅎ vowel merge)
+// apply here — every rule below was verified independently against
+// standard Korean-grammar references rather than assumed from the
+// existing 아/어-tense code (specs/tenses-v2.md's grammar table is the
+// source of truth this section implements).
+
+// A stem whose own batchim is already a plain ㄹ deletes the would-be 을
+// rather than doubling up (살다 -> 살 거예요, not 살을 거예요) — a
+// predictable phonological rule (detected by shape below), not a
+// lexicalized exception. It must never apply to a *derived* ㄹ, like
+// ㄷ-irregular's ㄷ->ㄹ swap (듣다 -> 들다-shaped stem) — that stays
+// 을 거예요 (들을 거예요) — so conjugateFutureDIrregular deliberately
+// builds its own ending instead of routing through attachFutureToBatchimStem.
+
+/**
+ * Attaches -(으)ㄹ 거예요 to an open-vowel (batchim-less) stem: the ㄹ
+ * fuses onto the stem's own last syllable as its batchim (가다 ->
+ * 갈 거예요). Shared by every future-tense case that ends up with an
+ * open stem — v1 Groups 2/3/4, 르-irregular, and ㅡ-contraction all
+ * reduce to this same shape for future tense, since none of their
+ * present/past-specific transformations trigger before this ending.
+ */
+function attachFutureToOpenStem(openStem: string): string {
+  const lastChar = openStem[openStem.length - 1];
+  const decomposed = decomposeSyllable(lastChar);
+  if (!decomposed || decomposed.final !== '') {
+    throw new Error(`attachFutureToOpenStem requires an open (batchim-less) stem: ${openStem}`);
+  }
+  const stemHead = openStem.slice(0, -1);
+  const withL = composeSyllable(decomposed.initial, decomposed.medial, 'ㄹ');
+  return stemHead + withL + ' 거예요';
+}
+
+/**
+ * Attaches -(으)ㄹ 거예요 to a batchim-final stem: 을 attaches as its own
+ * new syllable, since a closed syllable can't take a second final
+ * consonant (먹다 -> 먹을 거예요). Pass `allowLDeletion: false` for a
+ * *derived* batchim (ㄷ-irregular's swap) that must not delete.
+ */
+function attachFutureToBatchimStem(closedStem: string, allowLDeletion = true): string {
+  const lastChar = closedStem[closedStem.length - 1];
+  const decomposed = decomposeSyllable(lastChar);
+  if (!decomposed || decomposed.final === '') {
+    throw new Error(`attachFutureToBatchimStem requires a batchim-final stem: ${closedStem}`);
+  }
+  if (allowLDeletion && decomposed.final === 'ㄹ') {
+    return closedStem + ' 거예요';
+  }
+  return closedStem + '을 거예요';
+}
+
+/**
+ * Regular (non-irregular) future tense, auto-detected by shape: also
+ * covers 르-irregular and ㅡ-contraction, since neither's present/past
+ * transform is triggered by this ending — they're plain open-vowel
+ * stems as far as future tense is concerned (specs/tenses-v2.md).
+ */
+export function conjugateFutureRegular(word: string): string {
+  const stem = stripDaSuffix(word);
+  const lastChar = stem[stem.length - 1];
+  const decomposed = decomposeSyllable(lastChar);
+  if (!decomposed) {
+    throw new Error(`Not a valid Hangul syllable: ${lastChar}`);
+  }
+  return decomposed.final !== '' ? attachFutureToBatchimStem(stem) : attachFutureToOpenStem(stem);
+}
+
+/**
+ * ㄷ-irregular future (specs/tenses-v2.md): swap ㄷ->ㄹ same as present/
+ * past, then 을 거예요 — the derived ㄹ does *not* delete the way a
+ * native ㄹ-batchim stem's does (듣다 -> 들을 거예요, not 들 거예요).
+ */
+export function conjugateFutureDIrregular(word: string): string {
+  const stem = stripDaSuffix(word);
+  const lastChar = stem[stem.length - 1];
+  const decomposed = decomposeSyllable(lastChar);
+  if (!decomposed || decomposed.final !== 'ㄷ') {
+    throw new Error(`conjugateFutureDIrregular requires a ㄷ-batchim stem: ${word}`);
+  }
+  const swapped = composeSyllable(decomposed.initial, decomposed.medial, 'ㄹ');
+  const swappedStem = stem.slice(0, -1) + swapped;
+  return attachFutureToBatchimStem(swappedStem, false);
+}
+
+/**
+ * ㅂ-irregular future (specs/tenses-v2.md): drop ㅂ, insert 우 as its own
+ * syllable — always 우, never 오 (돕다's 오/와 exception is specific to
+ * the 아/어 vowel fusion and does not apply here, verified against
+ * reference sources: 돕다 -> 도울 거예요) — then ㄹ 거예요 on the
+ * resulting open stem.
+ */
+export function conjugateFutureBIrregular(word: string): string {
+  const stem = stripDaSuffix(word);
+  const lastChar = stem[stem.length - 1];
+  const decomposed = decomposeSyllable(lastChar);
+  if (!decomposed || decomposed.final !== 'ㅂ') {
+    throw new Error(`conjugateFutureBIrregular requires a ㅂ-batchim stem: ${word}`);
+  }
+  const openSyllable = composeSyllable(decomposed.initial, decomposed.medial, '');
+  const stemHead = stem.slice(0, -1) + openSyllable;
+  return attachFutureToOpenStem(stemHead + '우');
+}
+
+/**
+ * ㅅ-irregular future (specs/tenses-v2.md): drop ㅅ, but — unlike every
+ * other class here — the result still takes 을 거예요, not ㄹ 거예요,
+ * despite the stem now looking phonologically open (짓다 -> 지을 거예요,
+ * not 질 거예요). The one class that breaks the batchim/no-batchim
+ * pattern outright; verified against reference sources, not derived.
+ */
+export function conjugateFutureSIrregular(word: string): string {
+  const stem = stripDaSuffix(word);
+  const lastChar = stem[stem.length - 1];
+  const decomposed = decomposeSyllable(lastChar);
+  if (!decomposed || decomposed.final !== 'ㅅ') {
+    throw new Error(`conjugateFutureSIrregular requires a ㅅ-batchim stem: ${word}`);
+  }
+  const openSyllable = composeSyllable(decomposed.initial, decomposed.medial, '');
+  const stemHead = stem.slice(0, -1) + openSyllable;
+  return stemHead + '을 거예요';
+}
+
+/**
+ * ㅎ-irregular future (specs/tenses-v2.md): drop ㅎ, but with *no* ㅐ/ㅒ
+ * vowel merge — that fusion is 아/어-specific — just ㄹ 거예요 on the
+ * resulting open stem (그렇다 -> 그럴 거예요, not 그래 거예요).
+ */
+export function conjugateFutureHIrregular(word: string): string {
+  const stem = stripDaSuffix(word);
+  const lastChar = stem[stem.length - 1];
+  const decomposed = decomposeSyllable(lastChar);
+  if (!decomposed || decomposed.final !== 'ㅎ') {
+    throw new Error(`conjugateFutureHIrregular requires a ㅎ-batchim stem: ${word}`);
+  }
+  const openSyllable = composeSyllable(decomposed.initial, decomposed.medial, '');
+  const stemHead = stem.slice(0, -1) + openSyllable;
+  return attachFutureToOpenStem(stemHead);
+}
+
+function conjugateFuture(word: string): string {
+  const irregularClass = IRREGULAR_CLASS_BY_WORD[word];
+  switch (irregularClass) {
+    case 'd':
+      return conjugateFutureDIrregular(word);
+    case 'b':
+      return conjugateFutureBIrregular(word);
+    case 's':
+      return conjugateFutureSIrregular(word);
+    case 'h':
+      return conjugateFutureHIrregular(word);
+    default:
+      // 'leu' and 'eu' fall through here along with every regular word —
+      // neither irregular transform is triggered by this ending.
+      return conjugateFutureRegular(word);
+  }
+}
+
 /**
  * Auto-detecting dispatcher: picks the right pattern-group function from
  * the word's own shape (하다-ending, batchim presence, then vowel class),
  * so callers (e.g. board.ts) don't need to track which group a word
  * belongs to separately from the word itself. Checks the v2 irregular
  * lookup first, since irregularity can't be detected from shape alone.
+ * Future tense (Level 3) is dispatched separately — see conjugateFuture —
+ * since none of the present/past pattern-group logic below applies to it.
  */
 export function conjugate(word: string, tense: Tense): string {
+  if (tense === 'future') {
+    return conjugateFuture(word);
+  }
   const irregularClass = IRREGULAR_CLASS_BY_WORD[word];
   switch (irregularClass) {
     case 'd':

@@ -4,7 +4,7 @@
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
-export type ConjugationStage = 'present' | 'past';
+export type ConjugationStage = 'present' | 'past' | 'future';
 
 export interface StemTile {
   kind: 'stem';

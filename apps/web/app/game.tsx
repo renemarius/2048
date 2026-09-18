@@ -172,6 +172,18 @@ function unlockedVocab(dictionary: readonly DictionaryEntry[]): VocabEntry[] {
   return isLevel1Complete(dictionary) ? VOCAB : VOCAB_LEVEL_1;
 }
 
+// Level 3 gating (specs/tenses-v2.md, constitution.md v2 checklist):
+// future-tense endings stay out of the spawn pool until every word across
+// both unlocked vocab levels has reached a terminal stage — past *or*
+// future — at least once, mirroring Level 2's own full-completion gate.
+// `updateDictionary` already records a word on either terminal merge (see
+// board.ts's attemptMerge), so checking the dictionary here is enough —
+// no separate past-vs-future bookkeeping needed.
+function isFutureUnlocked(dictionary: readonly DictionaryEntry[]): boolean {
+  const learned = new Set(dictionary.map((entry) => entry.word));
+  return VOCAB.every((entry) => learned.has(entry.word));
+}
+
 // Dictionary UI v2 (specs/ui-v2.md): search, filter, sort, bookmarks.
 const LEVEL_1_WORDS = new Set(VOCAB_LEVEL_1.map((entry) => entry.word));
 
@@ -216,13 +228,19 @@ function tileClassName(tile: CoreTile, isClearing: boolean): string {
         ? styles.ending
         : tile.stage === 'present'
           ? styles.wordPresent
-          : styles.wordPast;
+          : tile.stage === 'future'
+            ? styles.wordFuture
+            : styles.wordPast;
   return isClearing ? `${kindClass} ${styles.fading}` : kindClass;
 }
 
 function tileLabel(tile: CoreTile): string {
   if (tile.kind === 'stem') return tile.word;
-  if (tile.kind === 'ending') return tile.tense === 'present' ? '현재' : '과거';
+  if (tile.kind === 'ending') {
+    if (tile.tense === 'present') return '현재';
+    if (tile.tense === 'future') return '미래';
+    return '과거';
+  }
   return tile.surfaceForm;
 }
 
@@ -242,14 +260,18 @@ function flattenBoard(board: Board): PositionedTile[] {
   return tiles;
 }
 
-function newSession(vocab: readonly VocabEntry[], mode: NormalOrHardMode): SessionState {
+function newSession(
+  vocab: readonly VocabEntry[],
+  mode: NormalOrHardMode,
+  futureUnlocked: boolean,
+): SessionState {
   const pool = createPool(vocab, POOL_SIZE);
   if (mode === 'hard') {
     const hardMode = createHardModeState(createEmptyBoard());
-    const board = createInitialBoard(vocabForWords(pool.active), blockedSet(hardMode));
+    const board = createInitialBoard(vocabForWords(pool.active), blockedSet(hardMode), futureUnlocked);
     return { board, score: 0, pool, hardMode };
   }
-  const board = createInitialBoard(vocabForWords(pool.active));
+  const board = createInitialBoard(vocabForWords(pool.active), undefined, futureUnlocked);
   return { board, score: 0, pool };
 }
 
@@ -276,6 +298,7 @@ export function Game({
   const [rulesOpen, setRulesOpen] = useState(false);
   const [newWordToast, setNewWordToast] = useState<string[] | null>(null);
   const [level2Toast, setLevel2Toast] = useState(false);
+  const [level3Toast, setLevel3Toast] = useState(false);
   const toastTimeoutRef = useRef<number | null>(null);
 
   // Refs mirror the latest committed state so the delayed fade-out/clear
@@ -318,7 +341,7 @@ export function Game({
       setHardMode(saved.hardMode ?? null);
       setGameOver(isGameOver(saved.board, saved.hardMode ? blockedSet(saved.hardMode) : undefined));
     } else {
-      const session = newSession(unlockedVocab(initialDictionary), mode);
+      const session = newSession(unlockedVocab(initialDictionary), mode, isFutureUnlocked(initialDictionary));
       setBoard(session.board);
       setPool(session.pool);
       setHardMode(session.hardMode ?? null);
@@ -329,7 +352,7 @@ export function Game({
     setHydrated(true);
 
     // First-ever visit (specs/ui-v2.md "Rules panel"): auto-open once so a
-    // new player learns the objective and what 현재/과거 mean without
+    // new player learns the objective and what 현재/과거/미래 mean without
     // having to find the "?" button first. Never auto-opens again.
     if (!hasSeenRules()) {
       setRulesOpen(true);
@@ -349,37 +372,40 @@ export function Game({
   // the word from the pool, clear its tiles, and spawn the replacement
   // word's stem. Reads current state via refs, not closure values, so it
   // stays correct even if the player keeps moving during the delay.
-  const scheduleCompletion = useCallback((words: string[], vocab: readonly VocabEntry[]) => {
-    window.setTimeout(() => {
-      if (!isMountedRef.current) return;
-      setClearingWords((prev) => new Set([...prev, ...words]));
-
+  const scheduleCompletion = useCallback(
+    (words: string[], vocab: readonly VocabEntry[], futureUnlocked: boolean) => {
       window.setTimeout(() => {
         if (!isMountedRef.current) return;
+        setClearingWords((prev) => new Set([...prev, ...words]));
 
-        const { pool: nextPool, added } = advancePool(poolRef.current, words, vocab);
-        let updatedBoard = clearCompletedTiles(boardRef.current, words);
-        const blocked = hardModeRef.current ? blockedSet(hardModeRef.current) : new Set<string>();
-        for (const word of added) {
-          updatedBoard = spawnTile(updatedBoard, vocabForWords([word]), blocked);
-        }
+        window.setTimeout(() => {
+          if (!isMountedRef.current) return;
 
-        setBoard(updatedBoard);
-        setPool(nextPool);
-        persistSession(mode, {
-          board: updatedBoard,
-          score: scoreRef.current,
-          pool: nextPool,
-          hardMode: hardModeRef.current ?? undefined,
-        });
-        setClearingWords((prev) => {
-          const next = new Set(prev);
-          words.forEach((w) => next.delete(w));
-          return next;
-        });
-      }, FADE_DURATION_MS);
-    }, FADE_HOLD_MS);
-  }, [mode]);
+          const { pool: nextPool, added } = advancePool(poolRef.current, words, vocab);
+          let updatedBoard = clearCompletedTiles(boardRef.current, words);
+          const blocked = hardModeRef.current ? blockedSet(hardModeRef.current) : new Set<string>();
+          for (const word of added) {
+            updatedBoard = spawnTile(updatedBoard, vocabForWords([word]), blocked, futureUnlocked);
+          }
+
+          setBoard(updatedBoard);
+          setPool(nextPool);
+          persistSession(mode, {
+            board: updatedBoard,
+            score: scoreRef.current,
+            pool: nextPool,
+            hardMode: hardModeRef.current ?? undefined,
+          });
+          setClearingWords((prev) => {
+            const next = new Set(prev);
+            words.forEach((w) => next.delete(w));
+            return next;
+          });
+        }, FADE_DURATION_MS);
+      }, FADE_HOLD_MS);
+    },
+    [mode],
+  );
 
   const handleMove = useCallback(
     (direction: Direction) => {
@@ -401,15 +427,21 @@ export function Game({
         REVIEW_CHANCE,
       );
       const spawnWords = reviewWord ? [...pool.active, reviewWord] : pool.active;
-      let nextBoard = spawnTile(result.board, vocabForWords(spawnWords), nextBlocked);
+      // Gated on the pre-move dictionary, same as unlockedVocab/pool.active
+      // above — this move's spawns reflect what was already unlocked
+      // going in, not what this move's own completions might just unlock.
+      const futureUnlocked = isFutureUnlocked(dictionary);
+      let nextBoard = spawnTile(result.board, vocabForWords(spawnWords), nextBlocked, futureUnlocked);
       if (mode === 'hard') {
         // Hard mode's board pressure: two tiles spawn per move instead of one.
-        nextBoard = spawnTile(nextBoard, vocabForWords(spawnWords), nextBlocked);
+        nextBoard = spawnTile(nextBoard, vocabForWords(spawnWords), nextBlocked, futureUnlocked);
       }
       const dictUpdate = updateDictionary(dictionary, result.completedWords);
       const nextScore = score + result.scoreDelta + dictUpdate.bonus;
       const justUnlockedLevel2 =
         !isLevel1Complete(dictionary) && isLevel1Complete(dictUpdate.dictionary);
+      const justUnlockedLevel3 =
+        !isFutureUnlocked(dictionary) && isFutureUnlocked(dictUpdate.dictionary);
 
       setBoard(nextBoard);
       setScore(nextScore);
@@ -432,6 +464,12 @@ export function Game({
         toastTimeoutRef.current = window.setTimeout(() => {
           setLevel2Toast(false);
         }, TOAST_DURATION_MS);
+      } else if (justUnlockedLevel3) {
+        setLevel3Toast(true);
+        if (toastTimeoutRef.current !== null) window.clearTimeout(toastTimeoutRef.current);
+        toastTimeoutRef.current = window.setTimeout(() => {
+          setLevel3Toast(false);
+        }, TOAST_DURATION_MS);
       } else if (dictUpdate.newWords.length > 0) {
         setNewWordToast(dictUpdate.newWords);
         if (toastTimeoutRef.current !== null) window.clearTimeout(toastTimeoutRef.current);
@@ -450,7 +488,11 @@ export function Game({
       }
 
       if (result.completedWords.length > 0) {
-        scheduleCompletion(result.completedWords, unlockedVocab(dictUpdate.dictionary));
+        scheduleCompletion(
+          result.completedWords,
+          unlockedVocab(dictUpdate.dictionary),
+          isFutureUnlocked(dictUpdate.dictionary),
+        );
       }
     },
     [board, score, bestScore, gameOver, pool, dictionary, hardMode, mode, scheduleCompletion],
@@ -494,7 +536,7 @@ export function Game({
   }, [rulesOpen]);
 
   function handleRestart() {
-    const session = newSession(unlockedVocab(dictionary), mode);
+    const session = newSession(unlockedVocab(dictionary), mode, isFutureUnlocked(dictionary));
     setBoard(session.board);
     setScore(0);
     setPool(session.pool);
@@ -565,6 +607,14 @@ export function Game({
         <div className={styles.toast} role="status">
           <div className={styles.toastLine}>
             <strong>Level 2 unlocked!</strong> Irregular-conjugation words will now show up.
+          </div>
+        </div>
+      )}
+
+      {level3Toast && (
+        <div className={styles.toast} role="status">
+          <div className={styles.toastLine}>
+            <strong>Level 3 unlocked!</strong> Future-tense endings will now show up.
           </div>
         </div>
       )}
@@ -641,9 +691,10 @@ export function Game({
             <p>
               Slide the whole board with arrow keys or WASD, like classic 2048. A{' '}
               <strong>stem</strong> tile (a verb/adjective, e.g. 가다) merges with a compatible{' '}
-              <strong>ending</strong> tile into a conjugated <strong>word</strong> tile — that word
-              tile can merge again with another ending to re-conjugate. No legal merge left
-              anywhere on the board ends the game.
+              <strong>ending</strong> tile into a conjugated <strong>word</strong> tile. A
+              present-tense word can merge again with a past ending to become past tense — or a
+              stem can merge directly with a future ending instead, skipping present entirely. No
+              legal merge left anywhere on the board ends the game.
             </p>
             <ul className={styles.rulesList}>
               <li>
@@ -652,10 +703,14 @@ export function Game({
               <li>
                 <strong>과거</strong> — past tense
               </li>
+              <li>
+                <strong>미래</strong> — future tense (merges directly from a stem, once unlocked)
+              </li>
             </ul>
             <p>
-              Reaching past tense on a word for the first time adds it to your{' '}
-              <strong>Dictionary</strong> and scores a one-time bonus.
+              Reaching past <strong>or</strong> future tense on a word for the first time adds it
+              to your <strong>Dictionary</strong> and scores a one-time bonus. Future-tense
+              endings unlock once every word you know has been fully conjugated at least once.
             </p>
             <button type="button" className={styles.button} onClick={() => setRulesOpen(false)}>
               Got it
@@ -737,7 +792,7 @@ export function Game({
               <div className={styles.dictionaryListWrap}>
                 {dictionary.length === 0 ? (
                   <p className={styles.dictionaryEmpty}>
-                    No words learned yet — conjugate one to its past form to add it here.
+                    No words learned yet — conjugate one to its past or future form to add it here.
                   </p>
                 ) : visibleDictionary.length === 0 ? (
                   <p className={styles.dictionaryEmpty}>No words match.</p>
@@ -768,7 +823,7 @@ export function Game({
                             >
                               🔊
                             </button>
-                            <span className={styles.dictionaryMastery} title="Times conjugated to past tense">
+                            <span className={styles.dictionaryMastery} title="Times fully conjugated (past or future)">
                               ×{count}
                             </span>
                             <span className={styles.dictionaryMeaning}>{entry?.meaning ?? ''}</span>

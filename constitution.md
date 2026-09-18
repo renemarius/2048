@@ -166,14 +166,16 @@ stem→word→conjugated-word chain instead.
 |---|---|
 | Stem + present ending → word tile (present form) | +10 |
 | Word (present) + past ending → word tile (past form) | +20 |
-| First time *ever* a base word reaches its past-form stage (added to the permanent dictionary) | +50, one-time per word |
+| Stem + future ending → word tile (future form) — Level 3, `specs/tenses-v2.md`, not yet implemented | +30 (matches the present→past route's summed total, since future retires a word in one merge instead of two) |
+| First time *ever* a base word reaches its past-form **or** future-form stage (added to the permanent dictionary) | +50, one-time per word |
 | Multiple merges triggered by one keypress | each merge's points, summed — matches 2048's chain behavior |
 
 - The **dictionary** is a persistent (`localStorage`) list of every
-  distinct base word the player has successfully conjugated to its final
-  v1 stage at least once, across all sessions ever played. The first time
-  a given base word reaches that stage, it's added to the dictionary and
-  the +50 bonus fires — this is the "new word overall" hook you described.
+  distinct base word the player has successfully conjugated to a terminal
+  stage (past, or future once Level 3 ships) at least once, across all
+  sessions ever played. The first time a given base word reaches either
+  terminal stage, it's added to the dictionary and the +50 bonus fires —
+  this is the "new word overall" hook you described.
   Each dictionary entry also tracks a **mastery count** — how many times
   that word has ever reached past-stage, including from spaced-review
   resurfacing (Section 3.2) in later sessions — shown in the dictionary
@@ -346,7 +348,37 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       once triggered) hasn't been confirmed by hand yet — that requires
       actually completing all 62 Level 1 words in a real session, which
       wasn't done this session
-- [ ] Additional tenses/endings (future tense, connective forms, etc.)
+- [ ] **Additional tenses — Level 3: future tense** — scope, merge model,
+      unlock gate, and the full per-class grammar rule table are DECIDED
+      and implemented, see `specs/tenses-v2.md`: `ConjugationStage`/`Tense`
+      now include `'future'`; `conjugate()` dispatches to dedicated
+      future-tense functions per class (`packages/core/src/conjugate.ts`);
+      `attemptMerge` merges a stem directly with a future ending (+30,
+      completes the word) as a parallel branch alongside the existing
+      present→past chain; `analyzeBoardNeeds`/`spawnTile`/
+      `createInitialBoard` gate future-ending spawns behind a new
+      `futureUnlocked` parameter (`packages/core/src/board.ts`); the web
+      app computes that gate from full-dictionary completion
+      (`isFutureUnlocked` in `apps/web/app/game.tsx`), shows a Level 3
+      unlock toast, adds a 미래 ending label/tile color, and the rules
+      panel now explains the future-tense branch. Verified via
+      `npm run test` (503 passing — 96-word exhaustive future-conjugation
+      suite plus new board.ts merge/gating tests, rest unchanged),
+      `typecheck`, `build` (all clean), and a running `next dev` serving
+      with no compile errors. **Not yet confirmed by hand**: actually
+      playing to a future-tense merge, watching the Level 3 unlock toast
+      fire (requires completing all 96 words in a real session, which
+      wasn't done this session), and reading the updated rules panel in
+      the browser. Connective forms (-고, -아서/어서, -지만, -(으)면, -는데,
+      etc.) are explicitly cut from this item — they're sentence-linking,
+      not sentence-final, so they don't fit the stem+ending merge model at
+      all; tracked as a separate, unscoped backlog item below instead of
+      bundled here.
+- [ ] Connective forms (-고, -아서/어서, -지만, -(으)면, -는데, etc.) — cut
+      from the future-tense item above (`specs/tenses-v2.md`) because they
+      require a different merge mechanic entirely (a clause+connective+
+      clause combination, not a terminal stem+ending word). Unscoped:
+      no spec, no target version yet.
 - [x] **Hard mode** — a Normal-mode difficulty modifier: spawns 2 tiles
       per move instead of 1, plus a 2-cell "dead zone" that can never be
       spawned into or slid onto (`packages/core/src/hardmode.ts`'s
@@ -442,6 +474,27 @@ between sessions:
   - **Visual fix** — Classic theme's dictionary panel currently clashes
     with its own palette; DECIDED to restyle it to match rather than
     leave it as a known visual bug. See `specs/ui-v2.md`.
+- **Additional tenses — Level 3 (this session):** scoped and DECIDED
+  before any code, per this project's spec-driven workflow. Full detail
+  in `specs/tenses-v2.md`; the entry here stays high-level per this
+  file's own convention.
+  - **Naming:** "Level 3" (content-difficulty tier, sibling of Level
+    1/Level 2) is a different axis from roadmap "v3" (Section 7's
+    Personalization & polish) — Level 3 ships under the v2 milestone, not
+    v3. Flagged explicitly since the numbering coincidentally lined up
+    through Level 2/v2 but diverges from here.
+  - **Merge model** — DECIDED as a parallel branch off the stem (future
+    isn't grammatically derived from past), not a third link chained
+    after past. A word retires the first time it reaches past *or*
+    future, not both. Future-tense merge scores +30 (matches the
+    present→past route's summed total).
+  - **Unlock gate** — DECIDED to mirror Level 2's pattern: future endings
+    stay out of the spawn pool until every unlocked-level word has
+    reached past or future at least once, then unlock with a toast.
+  - **Connective forms** — explicitly cut from this item, not deferred
+    within it. They're sentence-linking (연결어미), not sentence-final,
+    so they don't fit the stem+ending merge model regardless of tense
+    work — see the v2 checklist's new standalone bullet.
 - **Game modes v2 — OPEN items resolved (this session):** `specs/game-modes-v2.md`
   left three exact-mechanic decisions OPEN pending implementation; all
   three were resolved with the user before building:

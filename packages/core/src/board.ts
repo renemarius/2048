@@ -49,12 +49,17 @@ export interface MergeOutcome {
 }
 
 /**
- * Merge compatibility per constitution.md Section 3: a stem only merges
- * with a present-tense ending (→ present-stage word tile, +10); a
- * present-stage word only merges with a past-tense ending (→ past-stage
- * word tile, +20, and that word "completes"). Every other pairing
- * (stem+stem, ending+ending, word+word, stem+past-ending,
- * present-word+present-ending, past-stage word+anything) does not merge.
+ * Merge compatibility per constitution.md Section 3 (present/past) and
+ * specs/tenses-v2.md (Level 3 future): a stem merges with a present-tense
+ * ending (→ present-stage word tile, +10) or directly with a future-tense
+ * ending (→ future-stage word tile, +30, and that word "completes" — a
+ * parallel branch off the stem, not chained after past, since future
+ * isn't grammatically derived from past). A present-stage word only
+ * merges with a past-tense ending (→ past-stage word tile, +20, and that
+ * word "completes"). Every other pairing (stem+stem, ending+ending,
+ * word+word, stem+past-ending, present-word+present-ending,
+ * present-word+future-ending, past/future-stage word+anything) does not
+ * merge.
  */
 export function attemptMerge(a: Tile, b: Tile): MergeOutcome | null {
   const stemEnding = asStemEndingPair(a, b);
@@ -62,6 +67,13 @@ export function attemptMerge(a: Tile, b: Tile): MergeOutcome | null {
     const [stem, ending] = stemEnding;
     if (ending.tense === 'present') {
       return { tile: makeWordTile(stem.word, 'present'), scoreDelta: 10 };
+    }
+    if (ending.tense === 'future') {
+      return {
+        tile: makeWordTile(stem.word, 'future'),
+        scoreDelta: 30,
+        completedWord: stem.word,
+      };
     }
     return null;
   }
@@ -232,6 +244,12 @@ interface BoardNeeds {
   missingPoolWords: string[];
   /** How many more present endings would actually find a use right now. */
   presentEndingDeficit: number;
+  /**
+   * How many more future endings would actually find a use right now —
+   * always 0 until Level 3 unlocks (specs/tenses-v2.md), since future
+   * endings must not spawn before then regardless of stem supply.
+   */
+  futureEndingDeficit: number;
   /** How many more past endings would actually find a use right now. */
   pastEndingDeficit: number;
 }
@@ -244,12 +262,20 @@ interface BoardNeeds {
  * own 가요). An ending is "needed" only up to how many tiles could
  * actually use one right now (deficit = demand - supply, floored at 0),
  * so endings stop accumulating once there's nothing left for them to
- * merge with.
+ * merge with. Present and future endings share the same demand pool —
+ * both merge directly from a stem (specs/tenses-v2.md's parallel-branch
+ * model) — so a stem counts as "covered" by either one, not each
+ * independently.
  */
-function analyzeBoardNeeds(board: Board, poolWords: readonly string[]): BoardNeeds {
+function analyzeBoardNeeds(
+  board: Board,
+  poolWords: readonly string[],
+  futureUnlocked: boolean,
+): BoardNeeds {
   let stemCount = 0;
   let presentWordCount = 0;
   let presentEndingCount = 0;
+  let futureEndingCount = 0;
   let pastEndingCount = 0;
   const wordsOnBoard = new Set<string>();
 
@@ -264,22 +290,27 @@ function analyzeBoardNeeds(board: Board, poolWords: readonly string[]): BoardNee
         if (cell.stage === 'present') presentWordCount += 1;
       } else if (cell.tense === 'present') {
         presentEndingCount += 1;
+      } else if (cell.tense === 'future') {
+        futureEndingCount += 1;
       } else {
         pastEndingCount += 1;
       }
     }
   }
 
+  const stemEndingDeficit = Math.max(0, stemCount - presentEndingCount - futureEndingCount);
+
   return {
     missingPoolWords: poolWords.filter((word) => !wordsOnBoard.has(word)),
-    presentEndingDeficit: Math.max(0, stemCount - presentEndingCount),
+    presentEndingDeficit: stemEndingDeficit,
+    futureEndingDeficit: futureUnlocked ? stemEndingDeficit : 0,
     pastEndingDeficit: Math.max(0, presentWordCount - pastEndingCount),
   };
 }
 
-function createSpawnTile(board: Board, vocab: readonly VocabEntry[]): Tile {
+function createSpawnTile(board: Board, vocab: readonly VocabEntry[], futureUnlocked: boolean): Tile {
   const poolWords = vocab.map((entry) => entry.word);
-  const needs = analyzeBoardNeeds(board, poolWords);
+  const needs = analyzeBoardNeeds(board, poolWords, futureUnlocked);
 
   const candidates: Array<() => Tile> = [];
   if (needs.missingPoolWords.length > 0) {
@@ -290,6 +321,9 @@ function createSpawnTile(board: Board, vocab: readonly VocabEntry[]): Tile {
   }
   if (needs.presentEndingDeficit > 0) {
     candidates.push(() => ({ kind: 'ending', id: generateId(), tense: 'present' }));
+  }
+  if (needs.futureEndingDeficit > 0) {
+    candidates.push(() => ({ kind: 'ending', id: generateId(), tense: 'future' }));
   }
   if (needs.pastEndingDeficit > 0) {
     candidates.push(() => ({ kind: 'ending', id: generateId(), tense: 'past' }));
@@ -304,6 +338,11 @@ function createSpawnTile(board: Board, vocab: readonly VocabEntry[]): Tile {
       const entry = vocab[Math.floor(Math.random() * vocab.length)];
       return { kind: 'stem', id: generateId(), word: entry.word };
     }
+    if (futureUnlocked) {
+      const roll = Math.random();
+      const tense: ConjugationStage = roll < 0.55 ? 'present' : roll < 0.8 ? 'past' : 'future';
+      return { kind: 'ending', id: generateId(), tense };
+    }
     const tense: ConjugationStage = Math.random() < 0.7 ? 'present' : 'past';
     return { kind: 'ending', id: generateId(), tense };
   }
@@ -312,10 +351,16 @@ function createSpawnTile(board: Board, vocab: readonly VocabEntry[]): Tile {
   return chosen();
 }
 
+/**
+ * `futureUnlocked` (Level 3, specs/tenses-v2.md) gates whether future-tense
+ * endings can spawn at all — defaults to false so every existing caller
+ * (pre-Level-3 sessions, tests) is unaffected until it opts in.
+ */
 export function spawnTile(
   board: Board,
   vocab: readonly VocabEntry[],
   blocked: ReadonlySet<string> = new Set(),
+  futureUnlocked = false,
 ): Board {
   const emptyCells: Array<[number, number]> = [];
   board.forEach((row, r) => {
@@ -327,17 +372,18 @@ export function spawnTile(
 
   const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
   const newBoard = board.map((r) => r.slice());
-  newBoard[row][col] = createSpawnTile(board, vocab);
+  newBoard[row][col] = createSpawnTile(board, vocab, futureUnlocked);
   return newBoard;
 }
 
 export function createInitialBoard(
   vocab: readonly VocabEntry[],
   blocked: ReadonlySet<string> = new Set(),
+  futureUnlocked = false,
 ): Board {
   let board = createEmptyBoard();
-  board = spawnTile(board, vocab, blocked);
-  board = spawnTile(board, vocab, blocked);
+  board = spawnTile(board, vocab, blocked, futureUnlocked);
+  board = spawnTile(board, vocab, blocked, futureUnlocked);
   return board;
 }
 

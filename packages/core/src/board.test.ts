@@ -23,11 +23,11 @@ function stemTile(word: string): StemTile {
   return { kind: 'stem', id: nextId(), word };
 }
 
-function endingTile(tense: 'present' | 'past'): EndingTile {
+function endingTile(tense: 'present' | 'past' | 'future'): EndingTile {
   return { kind: 'ending', id: nextId(), tense };
 }
 
-function wordTile(word: string, stage: 'present' | 'past', surfaceForm: string): WordTile {
+function wordTile(word: string, stage: 'present' | 'past' | 'future', surfaceForm: string): WordTile {
   return { kind: 'word', id: nextId(), word, stage, surfaceForm };
 }
 
@@ -88,6 +88,40 @@ describe('attemptMerge', () => {
     expect(attemptMerge(stemTile('먹다'), stemTile('가다'))).toBeNull();
     expect(attemptMerge(endingTile('present'), endingTile('present'))).toBeNull();
     expect(attemptMerge(wordTile('먹다', 'present', '먹어요'), wordTile('가다', 'present', '가요'))).toBeNull();
+  });
+
+  // Level 3 (specs/tenses-v2.md): future is a parallel branch off the
+  // stem, not a third link chained after past — it merges directly from
+  // a stem tile, retires the word in one merge (+30), and a present-stage
+  // word never accepts a future ending.
+  describe('future tense (specs/tenses-v2.md)', () => {
+    it('merges a stem with a future ending directly into a future-stage word tile', () => {
+      const outcome = attemptMerge(stemTile('먹다'), endingTile('future'));
+      expect(outcome).not.toBeNull();
+      expect(outcome?.tile).toMatchObject({
+        kind: 'word',
+        word: '먹다',
+        stage: 'future',
+        surfaceForm: '먹을 거예요',
+      });
+      expect(outcome?.scoreDelta).toBe(30);
+      expect(outcome?.completedWord).toBe('먹다');
+    });
+
+    it('is order-independent for stem + future ending', () => {
+      const outcome = attemptMerge(endingTile('future'), stemTile('가다'));
+      expect(outcome?.tile).toMatchObject({ kind: 'word', word: '가다', stage: 'future', surfaceForm: '갈 거예요' });
+    });
+
+    it('does not merge a present-stage word with a future ending', () => {
+      expect(attemptMerge(wordTile('먹다', 'present', '먹어요'), endingTile('future'))).toBeNull();
+    });
+
+    it('does not merge a future-stage word with anything', () => {
+      expect(attemptMerge(wordTile('먹다', 'future', '먹을 거예요'), endingTile('present'))).toBeNull();
+      expect(attemptMerge(wordTile('먹다', 'future', '먹을 거예요'), endingTile('past'))).toBeNull();
+      expect(attemptMerge(wordTile('먹다', 'future', '먹을 거예요'), endingTile('future'))).toBeNull();
+    });
   });
 });
 
@@ -367,6 +401,71 @@ describe('spawnTile demand-driven formula (fixes ending/duplicate-stem pileup)',
     ]);
     for (let trial = 0; trial < 30; trial += 1) {
       const result = spawnTile(board, POOL);
+      const spawned = result.flat().find((cell, i) => cell !== null && board.flat()[i] === null);
+      expect(spawned?.kind).toBe('stem');
+    }
+  });
+});
+
+describe('spawnTile future-tense gating (Level 3, specs/tenses-v2.md)', () => {
+  const POOL = ['A다', 'B다', 'C다', 'D다'].map((word) => ({
+    word,
+    meaning: word,
+    exampleSentence: `${word} example.`,
+    exampleTranslation: 'example',
+  }));
+
+  it('never spawns a future ending when futureUnlocked is false (the default)', () => {
+    const board = emptyBoardWith([
+      [0, 0, stemTile('A다')],
+      [0, 1, stemTile('B다')],
+      [0, 2, stemTile('C다')],
+      [0, 3, stemTile('D다')],
+    ]);
+    for (let trial = 0; trial < 30; trial += 1) {
+      const result = spawnTile(board, POOL);
+      const spawned = result.flat().find((cell, i) => cell !== null && board.flat()[i] === null);
+      expect(spawned).not.toMatchObject({ kind: 'ending', tense: 'future' });
+    }
+  });
+
+  it('can spawn a future ending once futureUnlocked is true and stems are uncovered', () => {
+    const board = emptyBoardWith([
+      [0, 0, stemTile('A다')],
+      [0, 1, stemTile('B다')],
+      [0, 2, stemTile('C다')],
+      [0, 3, stemTile('D다')],
+    ]);
+    const seenTenses = new Set<string>();
+    for (let trial = 0; trial < 60; trial += 1) {
+      const result = spawnTile(board, POOL, new Set(), true);
+      const spawned = result.flat().find((cell, i) => cell !== null && board.flat()[i] === null);
+      if (spawned?.kind === 'ending') seenTenses.add(spawned.tense);
+    }
+    expect(seenTenses.has('present')).toBe(true);
+    expect(seenTenses.has('future')).toBe(true);
+  });
+
+  it('present and future endings share the same stem-coverage demand', () => {
+    // 4 stems, already covered by 2 present + 2 future endings (deficit
+    // 0 either way) — every spawn must be something other than a present
+    // or future ending (here, always a fallback/other candidate never
+    // arises since there are no empty pool words or past demand either,
+    // so this exercises the "candidates.length === 0" generic fallback,
+    // which must still never be blocked from including future once
+    // unlocked — asserted indirectly via the deficit check below).
+    const board = emptyBoardWith([
+      [0, 0, stemTile('A다')],
+      [0, 1, stemTile('B다')],
+      [0, 2, endingTile('present')],
+      [0, 3, endingTile('present')],
+    ]);
+    // A and B are covered by the 2 present endings already (deficit 0);
+    // C and D are still missing their stem — so every spawn must be a
+    // stem for C or D, never another present/future ending, regardless
+    // of futureUnlocked.
+    for (let trial = 0; trial < 30; trial += 1) {
+      const result = spawnTile(board, POOL, new Set(), true);
       const spawned = result.flat().find((cell, i) => cell !== null && board.flat()[i] === null);
       expect(spawned?.kind).toBe('stem');
     }

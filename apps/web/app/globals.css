@@ -16,6 +16,8 @@
   --tile-word-present-text: #ffffff;
   --tile-word-past: #e2543a;
   --tile-word-past-text: #ffffff;
+  --tile-word-future: #6b5b95;
+  --tile-word-future-text: #ffffff;
 
   --ui-text: #776e65;
 
@@ -44,6 +46,8 @@
   --tile-word-present-text: #2b2b2b;
   --tile-word-past: #7a9e8e;
   --tile-word-past-text: #ffffff;
+  --tile-word-future: #6c8fae;
+  --tile-word-future-text: #ffffff;
 
   --ui-text: #2b2b2b;
 

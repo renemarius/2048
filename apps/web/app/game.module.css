@@ -206,6 +206,11 @@
   color: var(--tile-word-past-text);
 }
 
+.wordFuture {
+  background: var(--tile-word-future);
+  color: var(--tile-word-future-text);
+}
+
 .hint {
   max-width: 420px;
   text-align: center;
