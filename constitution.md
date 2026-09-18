@@ -347,15 +347,34 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       actually completing all 62 Level 1 words in a real session, which
       wasn't done this session
 - [ ] Additional tenses/endings (future tense, connective forms, etc.)
-- [ ] **Hard mode** — a Normal-mode difficulty modifier built around
-      smaller/faster board pressure (see `specs/game-modes-v2.md`)
-- [ ] **Concentration mode** — a separate memory-match game mode (flip
-      tiles, match a Korean word to its English meaning), drawing on
-      words already in the player's dictionary; has its own scoreboard
-      (see `specs/game-modes-v2.md`)
-- [ ] **Per-mode scoring** — best score now tracked separately for
+- [x] **Hard mode** — a Normal-mode difficulty modifier: spawns 2 tiles
+      per move instead of 1, plus a 2-cell "dead zone" that can never be
+      spawned into or slid onto (`packages/core/src/hardmode.ts`'s
+      `HardModeState`, and the `blocked` param threaded through
+      `board.ts`'s `move`/`spawnTile`/`isGameOver`), relocating every 3-4
+      moves. Exact mechanic was an OPEN decision in `specs/game-modes-v2.md`,
+      resolved this session (see Open Decisions Log). Verified via
+      `npm run test` (299 passing — 24 new tests across `hardmode.test.ts`
+      and new blocked-cell cases in `board.test.ts`), `typecheck`, `build`
+      (all clean), and a running `next dev` serving the mode-switcher UI
+      with no compile errors. Not yet confirmed by hand: the actual
+      difficulty feel and relocation cadence in real play
+- [x] **Concentration mode** — a separate memory-match game mode
+      (`apps/web/app/concentration.tsx`, `packages/core/src/concentration.ts`):
+      flip tiles, match a Korean word to its English meaning, drawing
+      only on words already in the player's dictionary (fixed 4x4/8-pair
+      grid; an empty state below 8 learned words points back to Normal
+      mode). Has its own session score and best-score track; correct
+      matches stay purely session-scored, per the resolved OPEN decision
+      in `specs/game-modes-v2.md`. Verified via
+      `npm run test`, `typecheck`, `build` (all clean), running `next dev`
+      with no compile errors. Not yet confirmed by hand: the flip/match/
+      mismatch interaction and empty-state copy in a real browser
+- [x] **Per-mode scoring** — best score now tracked separately for
       Normal, Hard, and Concentration instead of one shared best score
-      (see `specs/game-modes-v2.md`)
+      (`apps/web/app/storage-keys.ts`'s `bestScoreKey(mode)`); Normal
+      mode falls back to the pre-v2 unsuffixed key so existing progress
+      carries forward. Verified alongside Hard/Concentration above.
 - [x] Enhanced dictionary UI — search (word or meaning), a filter row
       (All / Level 1 / Level 2 / ★ Starred), alphabetical sort (Korean/
       Hangul order, toggled against the existing "order learned" default),
@@ -423,6 +442,19 @@ between sessions:
   - **Visual fix** — Classic theme's dictionary panel currently clashes
     with its own palette; DECIDED to restyle it to match rather than
     leave it as a known visual bug. See `specs/ui-v2.md`.
+- **Game modes v2 — OPEN items resolved (this session):** `specs/game-modes-v2.md`
+  left three exact-mechanic decisions OPEN pending implementation; all
+  three were resolved with the user before building:
+  - **Hard mode mechanic:** both originally-listed options combined
+    (spawn 2 tiles per move + a dead zone), not a lighter version of
+    either — and the dead zone **relocates every 3-4 moves** rather than
+    staying fixed, per explicit user direction.
+  - **Concentration scoring:** a correct match stays purely
+    session-scored — no mastery-count bump or other permanent-dictionary
+    write.
+  - **Concentration grid size:** fixed 4x4 (16 cells, 8 pairs), not
+    dynamic — a dictionary under 8 words sees an empty-state message
+    instead of a shrunk grid.
 - **Dictionary persistence feature:** resolved — implemented as the
   permanent word dictionary, +50 one-time bonus, "new word" toast, and
   the tablet/paper-skinned dictionary panel (see the v1 checklist above).

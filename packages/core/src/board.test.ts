@@ -7,6 +7,7 @@ import {
   createInitialBoard,
   isGameOver,
   move,
+  positionKey,
   spawnTile,
 } from './board';
 import type { Board, Direction, EndingTile, StemTile, Tile, WordTile } from './types';
@@ -183,6 +184,50 @@ describe('move', () => {
   });
 });
 
+describe('move with blocked cells (Hard mode dead zone)', () => {
+  it('stops a tile at a blocked cell instead of sliding past it', () => {
+    const board = emptyBoardWith([[0, 3, stemTile('먹다')]]);
+    const blocked = new Set([positionKey(0, 1)]);
+    const result = move(board, 'left', blocked);
+    // Blocked at col 1, so the tile can only slide down to col 2, not col 0.
+    expect(result.board[0][2]).toMatchObject({ kind: 'stem', word: '먹다' });
+    expect(result.board[0][0]).toBeNull();
+    expect(result.board[0][1]).toBeNull();
+    expect(result.moved).toBe(true);
+  });
+
+  it('does not merge two compatible tiles across a blocked cell', () => {
+    const board = emptyBoardWith([
+      [0, 0, stemTile('먹다')],
+      [0, 3, endingTile('present')],
+    ]);
+    const blocked = new Set([positionKey(0, 1)]);
+    const result = move(board, 'left', blocked);
+    expect(result.scoreDelta).toBe(0);
+    expect(result.board[0][0]).toMatchObject({ kind: 'stem', word: '먹다' });
+    expect(result.board[0][2]).toMatchObject({ kind: 'ending', tense: 'present' });
+    expect(result.board[0][1]).toBeNull();
+  });
+
+  it('still merges normally within a single segment on either side of a blocked cell', () => {
+    const board = emptyBoardWith([
+      [0, 2, stemTile('먹다')],
+      [0, 3, endingTile('present')],
+    ]);
+    const blocked = new Set([positionKey(0, 1)]);
+    const result = move(board, 'left', blocked);
+    expect(result.scoreDelta).toBe(10);
+    expect(result.board[0][2]).toMatchObject({ kind: 'word', word: '먹다', stage: 'present' });
+  });
+
+  it('leaves a blocked cell empty and unaffected by the move', () => {
+    const board = emptyBoardWith([[0, 0, stemTile('먹다')]]);
+    const blocked = new Set([positionKey(0, 1)]);
+    const result = move(board, 'right', blocked);
+    expect(result.board[0][1]).toBeNull();
+  });
+});
+
 describe('spawnTile', () => {
   it('places exactly one new tile on an empty board', () => {
     const board = createEmptyBoard();
@@ -203,6 +248,34 @@ describe('spawnTile', () => {
         expect(vocabWords.has(tile.word)).toBe(true);
       }
     }
+  });
+
+  it('never spawns into a blocked cell', () => {
+    // Block every cell except (0,0) so any successful spawn must land there.
+    const blocked = new Set<string>();
+    for (let r = 0; r < BOARD_SIZE; r += 1) {
+      for (let c = 0; c < BOARD_SIZE; c += 1) {
+        if (r !== 0 || c !== 0) blocked.add(positionKey(r, c));
+      }
+    }
+    for (let trial = 0; trial < 20; trial += 1) {
+      const result = spawnTile(createEmptyBoard(), VOCAB, blocked);
+      const nonNullCells = result.flat().filter((cell) => cell !== null);
+      expect(nonNullCells).toHaveLength(1);
+      expect(result[0][0]).not.toBeNull();
+    }
+  });
+
+  it('returns the board unchanged when every non-blocked cell is full', () => {
+    const board = createEmptyBoard();
+    const blocked = new Set([positionKey(0, 0)]);
+    board.forEach((row, r) => {
+      row.forEach((_, c) => {
+        if (!blocked.has(positionKey(r, c))) board[r][c] = endingTile('present');
+      });
+    });
+    const result = spawnTile(board, VOCAB, blocked);
+    expect(result).toEqual(board);
   });
 
   it('returns the board unchanged when there is no empty cell', () => {
@@ -333,6 +406,31 @@ describe('isGameOver', () => {
     board[0][0] = stemTile('가다');
     board[0][1] = endingTile('present');
     expect(isGameOver(board)).toBe(false);
+  });
+
+  it('does not count an empty blocked cell as a remaining move', () => {
+    const board = createEmptyBoard();
+    for (let r = 0; r < BOARD_SIZE; r += 1) {
+      for (let c = 0; c < BOARD_SIZE; c += 1) {
+        board[r][c] = endingTile('present');
+      }
+    }
+    board[0][0] = null;
+    const blocked = new Set([positionKey(0, 0)]);
+    expect(isGameOver(board, blocked)).toBe(true);
+  });
+
+  it('does not treat a blocked cell as a merge partner even if it holds a tile', () => {
+    const board = createEmptyBoard();
+    for (let r = 0; r < BOARD_SIZE; r += 1) {
+      for (let c = 0; c < BOARD_SIZE; c += 1) {
+        board[r][c] = endingTile('past');
+      }
+    }
+    board[0][0] = stemTile('가다');
+    board[0][1] = endingTile('present'); // would merge with (0,0) if not blocked
+    const blocked = new Set([positionKey(0, 1)]);
+    expect(isGameOver(board, blocked)).toBe(true);
   });
 });
 

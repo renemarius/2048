@@ -5,3 +5,5 @@ export * from './vocab';
 export * from './board';
 export * from './pool';
 export * from './dictionary';
+export * from './hardmode';
+export * from './concentration';

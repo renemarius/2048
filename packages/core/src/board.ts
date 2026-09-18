@@ -10,6 +10,11 @@ function generateId(): string {
   return `tile-${idCounter}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Cell coordinates as `"row,col"`, used to key blocked-cell sets (Hard mode). */
+export function positionKey(row: number, col: number): string {
+  return `${row},${col}`;
+}
+
 export function createEmptyBoard(): Board {
   return Array.from({ length: BOARD_SIZE }, () => Array<Cell>(BOARD_SIZE).fill(null));
 }
@@ -115,6 +120,15 @@ function getLine(board: Board, direction: Direction, index: number): Cell[] {
   return board.map((row) => row[index]).reverse();
 }
 
+/** Board coordinates for each slot of `getLine(direction, index)`, in the same order. */
+function lineCoordinates(direction: Direction, index: number): Array<[number, number]> {
+  if (direction === 'left') return Array.from({ length: BOARD_SIZE }, (_, c) => [index, c]);
+  if (direction === 'right')
+    return Array.from({ length: BOARD_SIZE }, (_, c) => [index, BOARD_SIZE - 1 - c]);
+  if (direction === 'up') return Array.from({ length: BOARD_SIZE }, (_, r) => [r, index]);
+  return Array.from({ length: BOARD_SIZE }, (_, r) => [BOARD_SIZE - 1 - r, index]);
+}
+
 function setLine(board: Board, direction: Direction, index: number, line: Cell[]): void {
   if (direction === 'left') {
     board[index] = line;
@@ -139,6 +153,41 @@ function cellsEqual(a: Cell, b: Cell): boolean {
   return a.id === b.id;
 }
 
+/**
+ * Hard mode's dead-zone cells (specs/game-modes-v2.md) act as fixed walls:
+ * tiles slide up to them but never onto or through them, and they never
+ * merge. Blocked slots keep their original (always-null, per the
+ * blocked-cell-picking invariant in hardmode.ts) content untouched rather
+ * than being forced null here, so a stray tile is never silently dropped
+ * if that invariant is ever violated.
+ */
+function mergeLineWithBlocks(
+  line: Cell[],
+  blockedFlags: readonly boolean[],
+): { line: Cell[]; scoreDelta: number; completedWords: string[] } {
+  const resultLine: Cell[] = new Array(line.length).fill(null);
+  let scoreDelta = 0;
+  const completedWords: string[] = [];
+
+  let segmentStart = 0;
+  for (let i = 0; i <= line.length; i += 1) {
+    if (i < line.length && !blockedFlags[i]) continue;
+
+    const segmentTiles = line.slice(segmentStart, i).filter((cell): cell is Tile => cell !== null);
+    const merged = mergeLine(segmentTiles);
+    scoreDelta += merged.scoreDelta;
+    completedWords.push(...merged.completedWords);
+    merged.tiles.forEach((tile, offset) => {
+      resultLine[segmentStart + offset] = tile;
+    });
+
+    if (i < line.length) resultLine[i] = line[i];
+    segmentStart = i + 1;
+  }
+
+  return { line: resultLine, scoreDelta, completedWords };
+}
+
 export interface MoveResult {
   board: Board;
   scoreDelta: number;
@@ -146,7 +195,16 @@ export interface MoveResult {
   moved: boolean;
 }
 
-export function move(board: Board, direction: Direction): MoveResult {
+/**
+ * `blocked` (Hard mode's relocating dead zone, specs/game-modes-v2.md) is a
+ * set of `positionKey` strings that tiles can never slide onto or merge
+ * across; defaults to empty for Normal mode.
+ */
+export function move(
+  board: Board,
+  direction: Direction,
+  blocked: ReadonlySet<string> = new Set(),
+): MoveResult {
   const newBoard: Board = board.map((row) => row.slice());
   let totalScoreDelta = 0;
   const allCompletedWords: string[] = [];
@@ -154,20 +212,16 @@ export function move(board: Board, direction: Direction): MoveResult {
 
   for (let index = 0; index < BOARD_SIZE; index += 1) {
     const line = getLine(newBoard, direction, index);
-    const nonNullTiles = line.filter((cell): cell is Tile => cell !== null);
-    const { tiles: mergedTiles, scoreDelta, completedWords } = mergeLine(nonNullTiles);
+    const coords = lineCoordinates(direction, index);
+    const blockedFlags = coords.map(([r, c]) => blocked.has(positionKey(r, c)));
+    const { line: mergedLine, scoreDelta, completedWords } = mergeLineWithBlocks(line, blockedFlags);
     totalScoreDelta += scoreDelta;
     allCompletedWords.push(...completedWords);
 
-    const paddedLine: Cell[] = [
-      ...mergedTiles,
-      ...Array<Cell>(BOARD_SIZE - mergedTiles.length).fill(null),
-    ];
-
-    if (!line.every((cell, i) => cellsEqual(cell, paddedLine[i]))) {
+    if (!line.every((cell, i) => cellsEqual(cell, mergedLine[i]))) {
       moved = true;
     }
-    setLine(newBoard, direction, index, paddedLine);
+    setLine(newBoard, direction, index, mergedLine);
   }
 
   return { board: newBoard, scoreDelta: totalScoreDelta, completedWords: allCompletedWords, moved };
@@ -258,11 +312,15 @@ function createSpawnTile(board: Board, vocab: readonly VocabEntry[]): Tile {
   return chosen();
 }
 
-export function spawnTile(board: Board, vocab: readonly VocabEntry[]): Board {
+export function spawnTile(
+  board: Board,
+  vocab: readonly VocabEntry[],
+  blocked: ReadonlySet<string> = new Set(),
+): Board {
   const emptyCells: Array<[number, number]> = [];
   board.forEach((row, r) => {
     row.forEach((cell, c) => {
-      if (cell === null) emptyCells.push([r, c]);
+      if (cell === null && !blocked.has(positionKey(r, c))) emptyCells.push([r, c]);
     });
   });
   if (emptyCells.length === 0) return board;
@@ -273,10 +331,13 @@ export function spawnTile(board: Board, vocab: readonly VocabEntry[]): Board {
   return newBoard;
 }
 
-export function createInitialBoard(vocab: readonly VocabEntry[]): Board {
+export function createInitialBoard(
+  vocab: readonly VocabEntry[],
+  blocked: ReadonlySet<string> = new Set(),
+): Board {
   let board = createEmptyBoard();
-  board = spawnTile(board, vocab);
-  board = spawnTile(board, vocab);
+  board = spawnTile(board, vocab, blocked);
+  board = spawnTile(board, vocab, blocked);
   return board;
 }
 
@@ -299,17 +360,22 @@ export function clearCompletedTiles(board: Board, completedWords: readonly strin
   );
 }
 
-/** No empty cell remains, and no adjacent pair anywhere can merge. */
-export function isGameOver(board: Board): boolean {
+/**
+ * No empty (non-blocked) cell remains, and no adjacent pair anywhere can
+ * merge. Blocked cells (Hard mode) are excluded from both checks — they're
+ * not playable space, and a wall never counts as a merge partner.
+ */
+export function isGameOver(board: Board, blocked: ReadonlySet<string> = new Set()): boolean {
   for (let r = 0; r < BOARD_SIZE; r += 1) {
     for (let c = 0; c < BOARD_SIZE; c += 1) {
+      if (blocked.has(positionKey(r, c))) continue;
       const cell = board[r][c];
       if (cell === null) return false;
 
-      const right = c + 1 < BOARD_SIZE ? board[r][c + 1] : null;
+      const right = c + 1 < BOARD_SIZE && !blocked.has(positionKey(r, c + 1)) ? board[r][c + 1] : null;
       if (right && attemptMerge(cell, right)) return false;
 
-      const down = r + 1 < BOARD_SIZE ? board[r + 1][c] : null;
+      const down = r + 1 < BOARD_SIZE && !blocked.has(positionKey(r + 1, c)) ? board[r + 1][c] : null;
       if (down && attemptMerge(cell, down)) return false;
     }
   }

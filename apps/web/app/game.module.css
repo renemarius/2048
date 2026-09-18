@@ -22,6 +22,40 @@
   font-size: 1.15rem;
 }
 
+/* Mode switcher (specs/game-modes-v2.md): Normal / Hard / Concentration.
+   Sits between the header and the score/controls row, same on every mode's
+   screen so switching feels like a tab, not a navigation. */
+.modeSwitcher {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.modeButton {
+  flex: 1;
+  font: inherit;
+  font-size: 0.8rem;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  background: var(--cell-empty);
+  color: var(--ui-text);
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.modeButton:hover {
+  opacity: 0.9;
+}
+
+.modeButtonActive {
+  background: var(--tile-ending);
+  color: var(--tile-ending-text);
+  opacity: 1;
+  font-weight: 700;
+}
+
 .controls {
   width: 100%;
   max-width: 420px;
@@ -99,6 +133,19 @@
   border-radius: 6px;
 }
 
+/* Hard mode's relocating dead zone (specs/game-modes-v2.md) — a cell that
+   can never be spawned into or slid onto. Hatched rather than solid so it
+   still reads as "empty space", just walled off. */
+.blockedCell {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--board-bg),
+    var(--board-bg) 4px,
+    var(--cell-empty) 4px,
+    var(--cell-empty) 8px
+  );
+}
+
 .tile {
   position: absolute;
   left: calc(var(--gap) + var(--col) * (var(--cell-size) + var(--gap)));
@@ -164,6 +211,75 @@
   text-align: center;
   font-size: 0.8rem;
   opacity: 0.75;
+  margin: 0;
+}
+
+/* Concentration mode (specs/game-modes-v2.md) — a fixed 4x4 grid of
+   face-down cards, matching a word to its meaning. Reuses the same button
+   token as the rest of the UI rather than introducing new colors. */
+.concentrationGrid {
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.concentrationCard {
+  position: relative;
+  aspect-ratio: 1;
+  font: inherit;
+  font-size: clamp(0.65rem, 2.6vw, 0.85rem);
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  background: var(--tile-stem);
+  color: var(--tile-stem-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  text-align: center;
+}
+
+.concentrationCard:disabled {
+  cursor: default;
+}
+
+.concentrationCardFace {
+  overflow-wrap: anywhere;
+}
+
+.concentrationCardRevealed {
+  background: var(--tile-word-present);
+  color: var(--tile-word-present-text);
+}
+
+.concentrationCardMatched {
+  background: var(--tile-word-past);
+  color: var(--tile-word-past-text);
+  opacity: 0.85;
+}
+
+.concentrationCardMatched .speakButton {
+  position: absolute;
+  bottom: 0.1rem;
+  right: 0.2rem;
+}
+
+.concentrationEmpty {
+  max-width: 420px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  background: var(--board-bg);
+  border-radius: 10px;
+}
+
+.concentrationEmpty p {
   margin: 0;
 }
 

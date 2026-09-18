@@ -2,26 +2,35 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { Board, DictionaryEntry, Direction, Pool, Tile as CoreTile, VocabEntry } from 'core';
+import type { Board, DictionaryEntry, Direction, HardModeState, Pool, Tile as CoreTile, VocabEntry } from 'core';
 import {
   BOARD_SIZE,
   VOCAB,
   VOCAB_LEVEL_1,
+  advanceHardMode,
   advancePool,
+  blockedSet,
   clearCompletedTiles,
   createEmptyBoard,
+  createHardModeState,
   createInitialBoard,
   createPool,
   isGameOver,
   move,
   pickReviewWord,
+  positionKey,
   spawnTile,
   toggleBookmark,
   updateDictionary,
   NEW_WORD_BONUS,
 } from 'core';
+import { loadDictionary, meaningFor, persistDictionary, speak, vocabEntryFor } from './dictionary-storage';
+import { ModeSwitcher, type GameMode } from './mode-switcher';
+import { bestScoreKey, LEGACY_BEST_SCORE_KEY, LEGACY_SESSION_KEY, sessionKey } from './storage-keys';
 import { ThemeToggle } from './theme-toggle';
 import styles from './game.module.css';
+
+type NormalOrHardMode = Extract<GameMode, 'normal' | 'hard'>;
 
 // Only this many words are "in rotation" on the board at once (rather
 // than drawing from the full 62-word vocabulary), so the same few words
@@ -46,9 +55,6 @@ const FADE_DURATION_MS = 300;
 // How long the "new word" toast stays on screen before auto-dismissing.
 const TOAST_DURATION_MS = 2400;
 
-const SESSION_KEY = '2048-hangul:session';
-const BEST_SCORE_KEY = '2048-hangul:bestScore';
-const DICTIONARY_KEY = '2048-hangul:dictionary';
 const RULES_SEEN_KEY = '2048-hangul:rulesSeen';
 
 const KEY_TO_DIRECTION: Record<string, Direction> = {
@@ -70,11 +76,18 @@ interface SessionState {
   board: Board;
   score: number;
   pool: Pool;
+  /** Present only in Hard mode — the relocating dead zone (specs/game-modes-v2.md). */
+  hardMode?: HardModeState;
 }
 
-function loadSession(): SessionState | null {
+// Normal mode falls back to the pre-v2 unsuffixed keys (specs/game-modes-v2.md
+// "Per-mode scoring") so an existing player's in-progress board/best score
+// carries forward instead of resetting the first time this ships.
+function loadSession(mode: NormalOrHardMode): SessionState | null {
   try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
+    const raw =
+      window.localStorage.getItem(sessionKey(mode)) ??
+      (mode === 'normal' ? window.localStorage.getItem(LEGACY_SESSION_KEY) : null);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (
@@ -96,18 +109,20 @@ function loadSession(): SessionState | null {
   }
 }
 
-function persistSession(state: SessionState): void {
+function persistSession(mode: NormalOrHardMode, state: SessionState): void {
   try {
-    window.localStorage.setItem(SESSION_KEY, JSON.stringify(state));
+    window.localStorage.setItem(sessionKey(mode), JSON.stringify(state));
   } catch {
     // localStorage unavailable (private browsing, quota, etc.) — the game
     // still works, it just won't survive a reload.
   }
 }
 
-function loadBestScore(): number {
+function loadBestScore(mode: NormalOrHardMode): number {
   try {
-    const raw = window.localStorage.getItem(BEST_SCORE_KEY);
+    const raw =
+      window.localStorage.getItem(bestScoreKey(mode)) ??
+      (mode === 'normal' ? window.localStorage.getItem(LEGACY_BEST_SCORE_KEY) : null);
     const parsed = raw ? Number(raw) : 0;
     return Number.isFinite(parsed) ? parsed : 0;
   } catch {
@@ -115,40 +130,11 @@ function loadBestScore(): number {
   }
 }
 
-function persistBestScore(value: number): void {
+function persistBestScore(mode: NormalOrHardMode, value: number): void {
   try {
-    window.localStorage.setItem(BEST_SCORE_KEY, String(value));
+    window.localStorage.setItem(bestScoreKey(mode), String(value));
   } catch {
     // see persistSession
-  }
-}
-
-function loadDictionary(): DictionaryEntry[] {
-  try {
-    const raw = window.localStorage.getItem(DICTIONARY_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    // Back-compat: sessions saved before mastery counts existed stored
-    // plain `string[]` — treat each as having been completed once.
-    if (parsed.every((entry) => typeof entry === 'string')) {
-      return parsed.map((word) => ({ word, count: 1, bookmarked: false }));
-    }
-    if (
-      parsed.every(
-        (entry) =>
-          entry && typeof entry.word === 'string' && typeof entry.count === 'number',
-      )
-    ) {
-      // Back-compat: sessions saved before bookmarks existed are missing
-      // the field entirely — default to unstarred.
-      return (parsed as Array<Partial<DictionaryEntry> & { word: string; count: number }>).map(
-        (entry) => ({ word: entry.word, count: entry.count, bookmarked: entry.bookmarked ?? false }),
-      );
-    }
-    return [];
-  } catch {
-    return [];
   }
 }
 
@@ -165,38 +151,6 @@ function persistRulesSeen(): void {
     window.localStorage.setItem(RULES_SEEN_KEY, 'true');
   } catch {
     // see persistSession
-  }
-}
-
-function persistDictionary(entries: readonly DictionaryEntry[]): void {
-  try {
-    window.localStorage.setItem(DICTIONARY_KEY, JSON.stringify(entries));
-  } catch {
-    // see persistSession
-  }
-}
-
-function vocabEntryFor(word: string): VocabEntry | undefined {
-  return VOCAB.find((entry) => entry.word === word);
-}
-
-function meaningFor(word: string): string {
-  return vocabEntryFor(word)?.meaning ?? '';
-}
-
-// Web Speech API pronunciation — client-side, no backend/API key, so it
-// fits the same "no external service" principle as the rest of v1
-// (constitution.md Principle 2/4). No-ops quietly if unsupported.
-function speak(text: string): void {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-  try {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ko-KR';
-    window.speechSynthesis.speak(utterance);
-  } catch {
-    // Speech synthesis unavailable/blocked — silently skip, it's a nice-
-    // to-have, not core functionality.
   }
 }
 
@@ -288,17 +242,29 @@ function flattenBoard(board: Board): PositionedTile[] {
   return tiles;
 }
 
-function newSession(vocab: readonly VocabEntry[]): SessionState {
+function newSession(vocab: readonly VocabEntry[], mode: NormalOrHardMode): SessionState {
   const pool = createPool(vocab, POOL_SIZE);
+  if (mode === 'hard') {
+    const hardMode = createHardModeState(createEmptyBoard());
+    const board = createInitialBoard(vocabForWords(pool.active), blockedSet(hardMode));
+    return { board, score: 0, pool, hardMode };
+  }
   const board = createInitialBoard(vocabForWords(pool.active));
   return { board, score: 0, pool };
 }
 
-export function Game() {
+export function Game({
+  mode,
+  onModeChange,
+}: {
+  mode: NormalOrHardMode;
+  onModeChange: (mode: GameMode) => void;
+}) {
   const [board, setBoard] = useState<Board>(() => createEmptyBoard());
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
   const [pool, setPool] = useState<Pool>({ active: [], completed: [] });
+  const [hardMode, setHardMode] = useState<HardModeState | null>(null);
   const [gameOver, setGameOver] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [clearingWords, setClearingWords] = useState<Set<string>>(new Set());
@@ -318,11 +284,13 @@ export function Game() {
   const boardRef = useRef(board);
   const scoreRef = useRef(score);
   const poolRef = useRef(pool);
+  const hardModeRef = useRef(hardMode);
   const isMountedRef = useRef(false);
   useEffect(() => {
     boardRef.current = board;
     scoreRef.current = score;
     poolRef.current = pool;
+    hardModeRef.current = hardMode;
   });
   useEffect(() => {
     // Set (not just initialized) inside the effect itself so this is
@@ -342,19 +310,21 @@ export function Game() {
   // empty board so there's no hydration mismatch.
   useEffect(() => {
     const initialDictionary = loadDictionary();
-    const saved = loadSession();
+    const saved = loadSession(mode);
     if (saved) {
       setBoard(saved.board);
       setScore(saved.score);
       setPool(saved.pool);
-      setGameOver(isGameOver(saved.board));
+      setHardMode(saved.hardMode ?? null);
+      setGameOver(isGameOver(saved.board, saved.hardMode ? blockedSet(saved.hardMode) : undefined));
     } else {
-      const session = newSession(unlockedVocab(initialDictionary));
+      const session = newSession(unlockedVocab(initialDictionary), mode);
       setBoard(session.board);
       setPool(session.pool);
-      persistSession(session);
+      setHardMode(session.hardMode ?? null);
+      persistSession(mode, session);
     }
-    setBestScore(loadBestScore());
+    setBestScore(loadBestScore(mode));
     setDictionary(initialDictionary);
     setHydrated(true);
 
@@ -389,13 +359,19 @@ export function Game() {
 
         const { pool: nextPool, added } = advancePool(poolRef.current, words, vocab);
         let updatedBoard = clearCompletedTiles(boardRef.current, words);
+        const blocked = hardModeRef.current ? blockedSet(hardModeRef.current) : new Set<string>();
         for (const word of added) {
-          updatedBoard = spawnTile(updatedBoard, vocabForWords([word]));
+          updatedBoard = spawnTile(updatedBoard, vocabForWords([word]), blocked);
         }
 
         setBoard(updatedBoard);
         setPool(nextPool);
-        persistSession({ board: updatedBoard, score: scoreRef.current, pool: nextPool });
+        persistSession(mode, {
+          board: updatedBoard,
+          score: scoreRef.current,
+          pool: nextPool,
+          hardMode: hardModeRef.current ?? undefined,
+        });
         setClearingWords((prev) => {
           const next = new Set(prev);
           words.forEach((w) => next.delete(w));
@@ -403,13 +379,21 @@ export function Game() {
         });
       }, FADE_DURATION_MS);
     }, FADE_HOLD_MS);
-  }, []);
+  }, [mode]);
 
   const handleMove = useCallback(
     (direction: Direction) => {
       if (gameOver) return;
-      const result = move(board, direction);
+      const blocked = hardMode ? blockedSet(hardMode) : new Set<string>();
+      const result = move(board, direction, blocked);
       if (!result.moved) return;
+
+      // Relocate the dead zone (if due) using the post-move, pre-spawn
+      // board, per hardmode.ts's advanceHardMode contract, then spawn into
+      // the resulting (possibly-relocated) blocked set — so a new spawn
+      // never lands on a cell that just became blocked this move.
+      const nextHardMode = mode === 'hard' && hardMode ? advanceHardMode(hardMode, result.board) : null;
+      const nextBlocked = nextHardMode ? blockedSet(nextHardMode) : new Set<string>();
 
       const reviewWord = pickReviewWord(
         dictionary.map((entry) => entry.word),
@@ -417,7 +401,11 @@ export function Game() {
         REVIEW_CHANCE,
       );
       const spawnWords = reviewWord ? [...pool.active, reviewWord] : pool.active;
-      const nextBoard = spawnTile(result.board, vocabForWords(spawnWords));
+      let nextBoard = spawnTile(result.board, vocabForWords(spawnWords), nextBlocked);
+      if (mode === 'hard') {
+        // Hard mode's board pressure: two tiles spawn per move instead of one.
+        nextBoard = spawnTile(nextBoard, vocabForWords(spawnWords), nextBlocked);
+      }
       const dictUpdate = updateDictionary(dictionary, result.completedWords);
       const nextScore = score + result.scoreDelta + dictUpdate.bonus;
       const justUnlockedLevel2 =
@@ -425,7 +413,13 @@ export function Game() {
 
       setBoard(nextBoard);
       setScore(nextScore);
-      persistSession({ board: nextBoard, score: nextScore, pool });
+      setHardMode(nextHardMode);
+      persistSession(mode, {
+        board: nextBoard,
+        score: nextScore,
+        pool,
+        hardMode: nextHardMode ?? undefined,
+      });
 
       if (result.completedWords.length > 0) {
         setDictionary(dictUpdate.dictionary);
@@ -448,10 +442,10 @@ export function Game() {
 
       if (nextScore > bestScore) {
         setBestScore(nextScore);
-        persistBestScore(nextScore);
+        persistBestScore(mode, nextScore);
       }
 
-      if (isGameOver(nextBoard)) {
+      if (isGameOver(nextBoard, nextBlocked)) {
         setGameOver(true);
       }
 
@@ -459,7 +453,7 @@ export function Game() {
         scheduleCompletion(result.completedWords, unlockedVocab(dictUpdate.dictionary));
       }
     },
-    [board, score, bestScore, gameOver, pool, dictionary, scheduleCompletion],
+    [board, score, bestScore, gameOver, pool, dictionary, hardMode, mode, scheduleCompletion],
   );
 
   useEffect(() => {
@@ -500,13 +494,14 @@ export function Game() {
   }, [rulesOpen]);
 
   function handleRestart() {
-    const session = newSession(unlockedVocab(dictionary));
+    const session = newSession(unlockedVocab(dictionary), mode);
     setBoard(session.board);
     setScore(0);
     setPool(session.pool);
+    setHardMode(session.hardMode ?? null);
     setGameOver(false);
     setClearingWords(new Set());
-    persistSession(session);
+    persistSession(mode, session);
   }
 
   function handleToggleBookmark(word: string) {
@@ -521,6 +516,7 @@ export function Game() {
   );
 
   const tiles = hydrated ? flattenBoard(board) : [];
+  const blockedCells = hardMode ? new Set(hardMode.blockedCells) : null;
 
   return (
     <main className={styles.page}>
@@ -528,6 +524,8 @@ export function Game() {
         <h1 className={styles.title}>2048 Hangul Conjugation</h1>
         <ThemeToggle />
       </div>
+
+      <ModeSwitcher mode={mode} onChange={onModeChange} />
 
       <div className={styles.controls}>
         <div className={styles.scores}>
@@ -591,9 +589,18 @@ export function Game() {
 
       <div className={styles.boardWrap}>
         <div className={styles.cellGrid}>
-          {Array.from({ length: BOARD_SIZE * BOARD_SIZE }).map((_, i) => (
-            <div key={i} className={styles.emptyCell} />
-          ))}
+          {Array.from({ length: BOARD_SIZE * BOARD_SIZE }).map((_, i) => {
+            const row = Math.floor(i / BOARD_SIZE);
+            const col = i % BOARD_SIZE;
+            const isBlocked = blockedCells?.has(positionKey(row, col)) ?? false;
+            return (
+              <div
+                key={i}
+                className={isBlocked ? `${styles.emptyCell} ${styles.blockedCell}` : styles.emptyCell}
+                aria-hidden={isBlocked}
+              />
+            );
+          })}
         </div>
         {tiles.map(({ tile, row, col }) => {
           const isClearing = tile.kind !== 'ending' && clearingWords.has(tile.word);
