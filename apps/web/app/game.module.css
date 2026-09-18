@@ -224,8 +224,14 @@
   gap: 0.5rem;
 }
 
-.concentrationCard {
+/* Wraps each card + its (matched-only) speaker button as siblings, since a
+   <button> can't nest inside another <button> in valid HTML. */
+.concentrationCardWrap {
   position: relative;
+}
+
+.concentrationCard {
+  width: 100%;
   aspect-ratio: 1;
   font: inherit;
   font-size: clamp(0.65rem, 2.6vw, 0.85rem);
@@ -261,7 +267,7 @@
   opacity: 0.85;
 }
 
-.concentrationCardMatched .speakButton {
+.concentrationCardWrap .speakButton {
   position: absolute;
   bottom: 0.1rem;
   right: 0.2rem;

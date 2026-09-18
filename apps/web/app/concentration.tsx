@@ -175,31 +175,33 @@ export function Concentration({ onModeChange }: { mode: GameMode; onModeChange: 
               const isRevealed = revealedIds.includes(card.id) || matchedWords.has(card.word);
               const isMatched = matchedWords.has(card.word);
               return (
-                <button
-                  key={card.id}
-                  type="button"
-                  className={`${styles.concentrationCard} ${isRevealed ? styles.concentrationCardRevealed : ''} ${
-                    isMatched ? styles.concentrationCardMatched : ''
-                  }`}
-                  onClick={() => handleCardClick(card)}
-                  disabled={isMatched}
-                  aria-label={isRevealed ? card.label : 'Face-down card'}
-                >
-                  <span className={styles.concentrationCardFace}>{isRevealed ? card.label : '?'}</span>
+                // A <button> (the speaker) can't nest inside another
+                // <button> (the card) — invalid HTML, causes a hydration
+                // error. Sibling buttons inside a positioning wrapper div
+                // instead.
+                <div key={card.id} className={styles.concentrationCardWrap}>
+                  <button
+                    type="button"
+                    className={`${styles.concentrationCard} ${isRevealed ? styles.concentrationCardRevealed : ''} ${
+                      isMatched ? styles.concentrationCardMatched : ''
+                    }`}
+                    onClick={() => handleCardClick(card)}
+                    disabled={isMatched}
+                    aria-label={isRevealed ? card.label : 'Face-down card'}
+                  >
+                    <span className={styles.concentrationCardFace}>{isRevealed ? card.label : '?'}</span>
+                  </button>
                   {isMatched && (
                     <button
                       type="button"
                       className={styles.speakButton}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        speak(card.word);
-                      }}
+                      onClick={() => speak(card.word)}
                       aria-label={`Pronounce ${card.word}`}
                     >
                       🔊
                     </button>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
