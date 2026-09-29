@@ -374,11 +374,15 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       not sentence-final, so they don't fit the stem+ending merge model at
       all; tracked as a separate, unscoped backlog item below instead of
       bundled here.
-- [ ] Connective forms (-고, -아서/어서, -지만, -(으)면, -는데, etc.) — cut
-      from the future-tense item above (`specs/tenses-v2.md`) because they
-      require a different merge mechanic entirely (a clause+connective+
-      clause combination, not a terminal stem+ending word). Unscoped:
-      no spec, no target version yet.
+- [ ] **Connective forms — Sentence Builder mode** (-고, -지만, -아서/어서,
+      -(으)면) — cut from the future-tense item above because connectives
+      link clauses and don't fit the stem+ending board merge. Scoped as a
+      standalone Duolingo-style mode: translate an English sentence by
+      clicking/dragging Korean word tiles (with distractors) into order,
+      sentences composed from the existing example sentences and
+      dictionary words only, own score with a streak-multiplier combo and
+      its own best-score track. Spec: `specs/connectives-v2.md`. Not yet
+      implemented. `-는데` deliberately excluded from the first cut.
 - [x] **Hard mode** — a Normal-mode difficulty modifier: spawns 2 tiles
       per move instead of 1, plus a 2-cell "dead zone" that can never be
       spawned into or slid onto (`packages/core/src/hardmode.ts`'s
@@ -426,6 +430,20 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       theme (see `specs/ui-v2.md`). Verified via the same automated bar
       as the rules panel above, plus a hands-on browser pass — the user
       confirmed the new palette actually fits
+- [ ] **Settings page** — a dedicated settings page/panel with three
+      sections: (1) **Profile** — user name, scores (best score per mode:
+      Normal / Hard / Concentration), and analytics (local learning stats,
+      e.g. words learned, mastery counts, games played; exact metrics and
+      whether "analytics" means anything beyond local, on-device stats are
+      OPEN — no server-side tracking assumed), (2) **Themes** (switch among the themes that exist —
+      currently Classic / Modern; the full theme gallery stays a v3 item
+      below), and (3) a **Reset data** button that wipes locally stored
+      progress (dictionary, best scores, preferences) behind a confirmation
+      step. Detail spec to live in `specs/` (e.g. `specs/settings-v2.md`)
+      before implementation. DECIDED: reset wipes everything (no
+      selectable scope for now — mainly a dev convenience for resetting
+      one's own progress), and the existing main-screen theme toggle moves
+      into settings. OPEN: which analytics metrics to show.
 
 ### v3 — Personalization & polish (future)
 
@@ -495,6 +513,21 @@ between sessions:
     within it. They're sentence-linking (연결어미), not sentence-final,
     so they don't fit the stem+ending merge model regardless of tense
     work — see the v2 checklist's new standalone bullet.
+- **Connective forms — Sentence Builder (this session):** scoped and
+  DECIDED before any code; detail in `specs/connectives-v2.md`.
+  - **Form:** its own mode (not a board mechanic), translate-English-to-
+    Korean with a word bank incl. distractors, click + drag input.
+  - **Endings:** -고, -지만, -아서/어서, -(으)면 (core four); -는데 out
+    of the first cut.
+  - **Content:** composed from existing example sentences over the
+    player's dictionary words, not a new hand-written bank and not
+    auto-generated English (glosses like "wear (shoes)" can't be
+    templated safely).
+  - **Scoring:** +10 per correct, streak multiplier (x2 at 3, x3 at 5,
+    cap x3), reset on wrong, no lives; fourth best-score track.
+  - **OPEN:** fixed 10-sentence session length (proposed), the
+    `CONNECTIVE_MIN_WORDS` gate (proposed 4), and reference-verification
+    of the -(으)면 ㅎ-irregular and ㄹ-batchim rows.
 - **Game modes v2 — OPEN items resolved (this session):** `specs/game-modes-v2.md`
   left three exact-mechanic decisions OPEN pending implementation; all
   three were resolved with the user before building:
