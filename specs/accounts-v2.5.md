@@ -84,7 +84,9 @@ and deletes don't (Reset must always work); and a trigger keeping
 - Guest stats import once per device+account (`2048-hangul:syncedUser`
   marker). Sessions finished before that marker exists are not also queued
   in the outbox, to avoid double counting.
-- Logout clears the local progress cache (after a push attempt, with a
+- Logout clears the local progress cache *and* the device-local Normal/Hard
+  boards (found in hands-on testing: the guest otherwise inherited the
+  account's board) (after a push attempt, with a
   warning if unsynced) so accounts never bleed into each other on a shared
   device. The `bookmarked` flag is last-write-wins; counts/scores/games are
   max/increment.

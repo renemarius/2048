@@ -25,7 +25,7 @@ import {
   setProgressStore,
   type ProgressStore,
 } from './progress-store';
-import { bestScoreKey, LEGACY_BEST_SCORE_KEY } from './storage-keys';
+import { bestScoreKey, LEGACY_BEST_SCORE_KEY, LEGACY_SESSION_KEY, sessionKey } from './storage-keys';
 import { getSupabase } from './supabase-client';
 
 const OUTBOX_KEY = '2048-hangul:syncOutbox';
@@ -346,6 +346,10 @@ export async function finishLogout(): Promise<void> {
     window.localStorage.removeItem(OUTBOX_KEY);
     window.localStorage.removeItem(DIRTY_KEY);
     window.localStorage.removeItem(MARKER_KEY);
+    // In-progress boards are device-local but built from this account's
+    // dictionary and score, so they'd otherwise carry over to the guest.
+    window.localStorage.removeItem(LEGACY_SESSION_KEY);
+    for (const mode of ['normal', 'hard']) window.localStorage.removeItem(sessionKey(mode));
   } catch {
     // nothing to clear
   }
