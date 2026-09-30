@@ -465,11 +465,11 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       not moving tiles, theme switching from inside the panel, reset
       actually wiping and reloading, stats updating after real games
 
-### v2.5 — Accounts & cloud sync (planned, design DECIDED)
+### v2.5 — Accounts & cloud sync (done)
 
 Pulled forward from v3 so the Settings page has real identity behind it.
-Full design in [`specs/accounts-v2.5.md`](specs/accounts-v2.5.md). Nothing
-below is built yet. Summary of decisions:
+Full design in [`specs/accounts-v2.5.md`](specs/accounts-v2.5.md). All six
+items below are built and verified. Summary of decisions:
 
 - **Stack:** Supabase (Auth + Postgres with row-level security), client
   in `apps/web` only; `packages/core` stays free of it (Principle 3).
@@ -540,10 +540,11 @@ below is built yet. Summary of decisions:
   `auth` schema — covering the signup trigger, dictionary max/order/star
   semantics, best-score `greatest`, session pruning to 20, cross-user
   isolation, unverified writes blocked, anon blocked, and account deletion
-  cascading. **Not yet confirmed by hand against the live project:** the
-  browser sync path end to end (guest → signup → data appears on a second
-  browser/device, offline queue, logout clearing, reset, delete) and that
-  `0003_sync_functions.sql` has been applied there
+  cascading. Hands-on pass against the live project confirmed by the user
+  (guest → signup migration, second-browser sync, live updates, offline
+  queue, logout, reset, delete account). Logout initially left the
+  previous account's Normal/Hard board in place for the new guest; fixed
+  by also clearing the device-local boards on logout and re-confirmed
 
 ### v3 — Personalization & polish (future)
 
