@@ -84,10 +84,14 @@ migration; it just stops being the source of truth while signed in.
 - Profile shows the username (`UserXXXX` for guests) plus Sign up / Log in
   when a guest, and Log out when signed in. The free-text name field goes
   away — username comes from the account.
-- **Reset data** semantics need re-deciding once accounts exist: for a
-  signed-in user, does it wipe the server copy too? Proposed: yes, behind
-  a stronger confirmation that names the account; plus a separate
-  "delete account" later. OPEN.
+- **Reset data** — DECIDED: for a signed-in user it wipes the device
+  **and** the server copy but keeps the account, behind a stronger
+  confirmation that names the account (otherwise the server copy would
+  just re-sync and reset would look like a no-op). Guests keep today's
+  local-only reset.
+- **Delete account** — DECIDED: a separate Settings action with typed
+  confirmation, built last in v2.5. Removes the auth user and, via
+  cascade, every row.
 
 ## Privacy / compliance
 
@@ -96,14 +100,19 @@ note, and email is stored only by Supabase Auth, never copied into our
 tables. COPPA/GDPR surface stays minimal but is no longer zero — revisit
 the constitution's Non-Functional Requirements when building.
 
-## OPEN
+## Resolved decisions (formerly OPEN)
 
-- Email verification required before play, or only before sync?
-- Do leaderboards (still v3) key off `username` publicly? Needs a public
-  read policy on a view, not the raw tables.
-- Reset/delete-account semantics (above).
-- Supabase project region and free-tier pause behavior (free projects pause
-  after inactivity) — acceptable for a hobby project?
+- **Email verification:** required only before syncing. Signup is instant
+  and play continues as a guest-equivalent; migration and cloud writes
+  start once the email is confirmed. Until then Settings shows a
+  "verify your email to start syncing" notice.
+- **Leaderboards (v3):** usernames are public, exposed only through a
+  read-only Postgres view of username + best scores; raw tables stay
+  private under RLS. An opt-out toggle is decided when leaderboards are
+  actually built.
+- **Free-tier pausing:** accepted for now. The local cache keeps the game
+  playable while paused. Revisit (keep-alive ping or paid tier) if real
+  users appear.
 
 ## Suggested build order
 
@@ -113,3 +122,4 @@ the constitution's Non-Functional Requirements when building.
 4. Guest → account migration.
 5. Server-backed reads/writes + offline cache.
 6. Rework Settings profile/reset for accounts.
+7. Delete account.

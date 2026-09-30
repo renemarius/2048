@@ -489,7 +489,8 @@ below is built yet. Summary of decisions:
 - [ ] Guest → account data migration
 - [ ] Server-backed reads/writes with offline cache
 - [ ] Settings profile & reset reworked for accounts (username replaces
-      the free-text name; reset semantics per spec OPEN item)
+      the free-text name; reset wipes device + server copy, keeps account)
+- [ ] Delete account (separate from reset, typed confirmation; built last)
 
 ### v3 — Personalization & polish (future)
 
@@ -580,9 +581,12 @@ between sessions:
   (Auth + Postgres/RLS), email + password with a unique username as
   display name, guests shown as random `UserXXXX`, guest data migrates
   into the account on signup, scheduled as a new v2.5 milestone pulled out
-  of v3, Principle 2 amended. Design in `specs/accounts-v2.5.md`; open
-  questions (email verification timing, reset/delete-account semantics,
-  leaderboard visibility, free-tier pausing) are listed there.
+  of v3, Principle 2 amended. Design in `specs/accounts-v2.5.md`. The
+  follow-up open questions were all resolved: email verification only
+  before syncing; Reset wipes device + server copy but keeps the account;
+  a separate Delete account action, built last; leaderboards later expose
+  public usernames + best scores only via a read-only view; Supabase
+  free-tier pausing accepted for now.
 - **Settings page (this session):** analytics metrics DECIDED: words
   learned, mastery stats, games played per mode, and points per session
   (last 20, with average) — all local, no tracking. Placement DECIDED as a
