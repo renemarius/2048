@@ -496,8 +496,20 @@ below is built yet. Summary of decisions:
       pass confirmed by the user: existing dictionary/best scores still
       load, the guest label shows in Settings, and Reset issues a new
       label
-- [ ] Supabase project, schema, RLS policies, env wiring
-- [ ] Signup / login / logout UI (in Settings)
+- [x] Supabase project, schema, RLS policies, env wiring —
+      `supabase/migrations/0001_init.sql` (tables, RLS, signup trigger,
+      `username_available()`) plus `0002_grants.sql` (this project doesn't
+      auto-grant table access to `authenticated`, so RLS alone left signed-in
+      users with "permission denied"; `anon` deliberately gets none). Applied
+      to the live project; verified anon reads are denied and the RPC works.
+      Signed-in reads/writes to the data tables are not exercised until
+      server-backed sync is built
+- [x] Signup / login / logout UI (in Settings) — `apps/web/app/auth.ts`
+      (`useAuth`, `signUp`, `logIn`, `logOut`) and an account section in
+      `settings.tsx`; unset env vars leave the app guest-only. Hands-on pass
+      confirmed by the user against the live project: signup, email
+      verification, login showing the username, and the "verify your email
+      to start syncing" notice before verification
 - [ ] Guest → account data migration
 - [ ] Server-backed reads/writes with offline cache
 - [ ] Settings profile & reset reworked for accounts (username replaces
