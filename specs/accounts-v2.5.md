@@ -66,6 +66,14 @@ append guest sessions only once (migration is marked done in localStorage
 so it cannot run twice). Guest local data is left in place after
 migration; it just stops being the source of truth while signed in.
 
+The SQL lives in `supabase/migrations/0001_init.sql`. Beyond the tables
+above it adds: a signup trigger that creates the `profiles` row from the
+`username` metadata; case-insensitive username uniqueness; a
+`username_available()` RPC for the signup form; an `is_email_verified()`
+helper so **writes** (insert/update) require a confirmed email while reads
+and deletes don't (Reset must always work); and a trigger keeping
+`session_records` at 20 rows per user.
+
 ## Sync model
 
 - Signed out: localStorage is the store (unchanged behavior).
