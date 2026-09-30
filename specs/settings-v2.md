@@ -12,8 +12,9 @@ old main-screen theme toggle. No routing.
 ## Sections
 
 1. **Profile**
-   - **Name** — free text, persisted (`2048-hangul:profileName`), max 24
-     chars. Purely local; shown nowhere else yet.
+   - **Playing as** — the guest label `UserXXXX` (see
+     `specs/accounts-v2.5.md`). This replaced the original free-text name
+     field when accounts were planned.
    - **Best scores** — Normal / Hard / Concentration / Sentences (the
      existing `bestScoreKey(mode)` tracks).
    - **Analytics** (local, on-device only — no tracking of any kind):

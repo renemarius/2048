@@ -9,11 +9,10 @@ import {
   createConcentrationDeck,
   isMatch,
 } from 'core';
-import { loadDictionary, meaningFor, speak } from './dictionary-storage';
+import { meaningFor, speak } from './dictionary-storage';
 import { ModeSwitcher, type GameMode } from './mode-switcher';
-import { bestScoreKey } from './storage-keys';
+import { loadBestScore, loadDictionary, persistBestScore, recordFinishedSession } from './progress-store';
 import { SettingsButton } from './settings';
-import { recordFinishedSession } from './stats-storage';
 import styles from './game.module.css';
 
 // Concentration mode (specs/game-modes-v2.md): a standalone memory/match
@@ -30,25 +29,6 @@ const MISMATCH_DELAY_MS = 900;
 function newDeck(dictionary: readonly DictionaryEntry[]): ConcentrationCard[] {
   const entries = dictionary.map((entry) => ({ word: entry.word, meaning: meaningFor(entry.word) }));
   return createConcentrationDeck(entries, CONCENTRATION_PAIR_COUNT);
-}
-
-function loadBestScore(): number {
-  try {
-    const raw = window.localStorage.getItem(bestScoreKey(MODE));
-    const parsed = raw ? Number(raw) : 0;
-    return Number.isFinite(parsed) ? parsed : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function persistBestScore(value: number): void {
-  try {
-    window.localStorage.setItem(bestScoreKey(MODE), String(value));
-  } catch {
-    // localStorage unavailable — the mode still works, just won't
-    // remember a best score across reloads.
-  }
 }
 
 export function Concentration({ onModeChange }: { mode: GameMode; onModeChange: (mode: GameMode) => void }) {
@@ -74,7 +54,7 @@ export function Concentration({ onModeChange }: { mode: GameMode; onModeChange: 
     const dictionary = loadDictionary();
     setDictionaryCount(dictionary.length);
     startNewGame(dictionary);
-    setBestScore(loadBestScore());
+    setBestScore(loadBestScore(MODE));
     setHydrated(true);
   }, [startNewGame]);
 
@@ -90,7 +70,7 @@ export function Concentration({ onModeChange }: { mode: GameMode; onModeChange: 
   useEffect(() => {
     if (won && score > bestScore) {
       setBestScore(score);
-      persistBestScore(score);
+      persistBestScore(MODE, score);
     }
   }, [won, score, bestScore]);
 

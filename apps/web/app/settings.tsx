@@ -9,14 +9,9 @@ import {
   type StatsMode,
 } from 'core';
 import styles from './game.module.css';
-import { loadDictionary, meaningFor } from './dictionary-storage';
-import {
-  clearAllLocalData,
-  loadProfileName,
-  loadStats,
-  persistProfileName,
-} from './stats-storage';
-import { bestScoreKey, LEGACY_BEST_SCORE_KEY } from './storage-keys';
+import { meaningFor } from './dictionary-storage';
+import { clearAllLocalData, loadOrCreateGuestName } from './identity';
+import { loadBestScore, loadDictionary, loadStats } from './progress-store';
 import { THEMES, applyTheme, loadTheme, type Theme } from './theme';
 
 const MODE_LABELS: Record<StatsMode, string> = {
@@ -25,18 +20,6 @@ const MODE_LABELS: Record<StatsMode, string> = {
   concentration: 'Concentration',
   connectives: 'Sentences',
 };
-
-function loadBest(mode: StatsMode): number {
-  try {
-    const raw =
-      window.localStorage.getItem(bestScoreKey(mode)) ??
-      (mode === 'normal' ? window.localStorage.getItem(LEGACY_BEST_SCORE_KEY) : null);
-    const parsed = raw ? Number(raw) : 0;
-    return Number.isFinite(parsed) ? parsed : 0;
-  } catch {
-    return 0;
-  }
-}
 
 export function SettingsButton({ onOpenChange }: { onOpenChange?: (open: boolean) => void }) {
   const [open, setOpenState] = useState(false);
@@ -67,11 +50,11 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
   // Read on open rather than on mount of the page: the games write to
   // localStorage, so this always reflects the latest state.
   useEffect(() => {
-    setName(loadProfileName());
+    setName(loadOrCreateGuestName());
     setTheme(loadTheme());
     setStats(loadStats());
     setBests(
-      Object.fromEntries(STATS_MODES.map((mode) => [mode, loadBest(mode)])) as Record<
+      Object.fromEntries(STATS_MODES.map((mode) => [mode, loadBestScore(mode)])) as Record<
         StatsMode,
         number
       >,
@@ -109,20 +92,12 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         <section className={styles.settingsSection}>
           <h3>Profile</h3>
-          <label className={styles.settingsRow}>
-            <span>Name</span>
-            <input
-              type="text"
-              className={styles.dictionarySearch}
-              value={name}
-              maxLength={24}
-              placeholder="Your name"
-              onChange={(event) => {
-                setName(event.target.value);
-                persistProfileName(event.target.value);
-              }}
-            />
-          </label>
+          <dl className={styles.statList}>
+            <div className={styles.statRow}>
+              <dt>Playing as</dt>
+              <dd>{name} (guest)</dd>
+            </div>
+          </dl>
 
           {bests && (
             <>

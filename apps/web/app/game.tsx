@@ -24,11 +24,17 @@ import {
   updateDictionary,
   NEW_WORD_BONUS,
 } from 'core';
-import { loadDictionary, meaningFor, persistDictionary, speak, vocabEntryFor } from './dictionary-storage';
+import { meaningFor, speak, vocabEntryFor } from './dictionary-storage';
 import { ModeSwitcher, type GameMode } from './mode-switcher';
-import { bestScoreKey, LEGACY_BEST_SCORE_KEY, LEGACY_SESSION_KEY, sessionKey } from './storage-keys';
+import {
+  loadBestScore,
+  loadDictionary,
+  persistBestScore,
+  persistDictionary,
+  recordFinishedSession,
+} from './progress-store';
+import { LEGACY_SESSION_KEY, sessionKey } from './storage-keys';
 import { SettingsButton } from './settings';
-import { recordFinishedSession } from './stats-storage';
 import styles from './game.module.css';
 
 type NormalOrHardMode = Extract<GameMode, 'normal' | 'hard'>;
@@ -116,26 +122,6 @@ function persistSession(mode: NormalOrHardMode, state: SessionState): void {
   } catch {
     // localStorage unavailable (private browsing, quota, etc.) — the game
     // still works, it just won't survive a reload.
-  }
-}
-
-function loadBestScore(mode: NormalOrHardMode): number {
-  try {
-    const raw =
-      window.localStorage.getItem(bestScoreKey(mode)) ??
-      (mode === 'normal' ? window.localStorage.getItem(LEGACY_BEST_SCORE_KEY) : null);
-    const parsed = raw ? Number(raw) : 0;
-    return Number.isFinite(parsed) ? parsed : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function persistBestScore(mode: NormalOrHardMode, value: number): void {
-  try {
-    window.localStorage.setItem(bestScoreKey(mode), String(value));
-  } catch {
-    // see persistSession
   }
 }
 

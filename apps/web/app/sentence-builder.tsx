@@ -10,11 +10,10 @@ import {
   scoreAnswer,
   streakMultiplier,
 } from 'core';
-import { loadDictionary, speak, vocabEntryFor } from './dictionary-storage';
+import { speak, vocabEntryFor } from './dictionary-storage';
 import { ModeSwitcher, type GameMode } from './mode-switcher';
-import { bestScoreKey } from './storage-keys';
+import { loadBestScore, loadDictionary, persistBestScore, recordFinishedSession } from './progress-store';
 import { SettingsButton } from './settings';
-import { recordFinishedSession } from './stats-storage';
 import styles from './game.module.css';
 
 // Sentence Builder (specs/connectives-v2.md): translate an English sentence
@@ -24,25 +23,6 @@ import styles from './game.module.css';
 // file is only the tile/answer-row UI wired to it.
 
 const MODE: GameMode = 'connectives';
-
-function loadBestScore(): number {
-  try {
-    const raw = window.localStorage.getItem(bestScoreKey(MODE));
-    const parsed = raw ? Number(raw) : 0;
-    return Number.isFinite(parsed) ? parsed : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function persistBestScore(value: number): void {
-  try {
-    window.localStorage.setItem(bestScoreKey(MODE), String(value));
-  } catch {
-    // localStorage unavailable — the mode still works, just won't
-    // remember a best score across reloads.
-  }
-}
 
 function learnedEntries(): VocabEntry[] {
   return loadDictionary()
@@ -82,14 +62,14 @@ export function SentenceBuilder({ onModeChange }: { onModeChange: (mode: GameMod
 
   useEffect(() => {
     startSession();
-    setBestScore(loadBestScore());
+    setBestScore(loadBestScore(MODE));
     setHydrated(true);
   }, [startSession]);
 
   useEffect(() => {
     if (finished && score > bestScore) {
       setBestScore(score);
-      persistBestScore(score);
+      persistBestScore(MODE, score);
     }
   }, [finished, score, bestScore]);
 
