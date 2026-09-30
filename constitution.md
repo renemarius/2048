@@ -33,9 +33,11 @@ is judged by hand.
    bug, not a nice-to-have. If a rule can't be implemented correctly in the
    time available, cut the rule (fewer verb types/tenses) rather than ship
    it wrong.
-2. **Client-side only, no backend, for v1.** No auth, no server, no
+2. **Client-side only, no backend, for v1 and v2.** No auth, no server, no
    database. State lives in the browser (`localStorage`). This keeps
-   scope inside a one-week solo build.
+   scope inside a one-week solo build. **Amended:** from v2.5, accounts and
+   cloud sync (Supabase) are in scope — see Section 7's v2.5 and
+   `specs/accounts-v2.5.md`. Guests still play fully client-side.
 3. **Core logic is framework-agnostic.** The board/merge engine and the
    conjugation engine are plain TypeScript with zero UI or Next.js
    dependencies, so the same code can later power a React Native /
@@ -227,7 +229,7 @@ stem→word→conjugated-word chain instead.
 
 ## 6. Out of Scope for v1 (explicit)
 
-- Accounts/auth, login/signup, cross-device sync
+- Accounts/auth, login/signup, cross-device sync (moved to v2.5, see Section 7)
 - Leaderboards, achievements, daily challenges, undo/save-resume beyond
   simple session persistence
 - Monetization (ads/IAP) — not planned at all currently
@@ -463,12 +465,37 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       not moving tiles, theme switching from inside the panel, reset
       actually wiping and reloading, stats updating after real games
 
+### v2.5 — Accounts & cloud sync (planned, design DECIDED)
+
+Pulled forward from v3 so the Settings page has real identity behind it.
+Full design in [`specs/accounts-v2.5.md`](specs/accounts-v2.5.md). Nothing
+below is built yet. Summary of decisions:
+
+- **Stack:** Supabase (Auth + Postgres with row-level security), client
+  in `apps/web` only; `packages/core` stays free of it (Principle 3).
+- **Login:** email + password; username is a unique display name.
+- **Guests:** signed-out users are shown as `UserXXXX` (random 4 digits,
+  generated once, kept in localStorage) and play fully offline.
+- **Guest → account:** local dictionary, best scores and stats migrate
+  into the account on signup/login (merge: union words, max counts and
+  scores).
+- **Synced:** dictionary, best scores, stats. **Not synced:** in-progress
+  boards (device-local).
+
+- [ ] Storage-interface refactor in `apps/web` (localStorage impl, no
+      behavior change) + guest `UserXXXX` label
+- [ ] Supabase project, schema, RLS policies, env wiring
+- [ ] Signup / login / logout UI (in Settings)
+- [ ] Guest → account data migration
+- [ ] Server-backed reads/writes with offline cache
+- [ ] Settings profile & reset reworked for accounts (username replaces
+      the free-text name; reset semantics per spec OPEN item)
+
 ### v3 — Personalization & polish (future)
 
 - [ ] Full theme gallery beyond v1's two defaults (pastel, gothic, neon,
       monotone...)
 - [ ] Mobile app (React Native/Expo, reusing `packages/core`)
-- [ ] Accounts + cross-device progress sync
 - [ ] Leaderboards / achievements / daily challenges
 
 Later versions (v4+) to be defined once v3 ships.
@@ -548,6 +575,14 @@ between sessions:
     -(으)면 ㅎ-irregular and ㄹ-batchim rows were checked from knowledge
     of standard references, not a live lookup — see the note in
     `specs/connectives-v2.md`.
+- **Accounts & cloud sync (this session):** the shipped Settings panel is
+  local-only; the user wants real accounts behind it. DECIDED: Supabase
+  (Auth + Postgres/RLS), email + password with a unique username as
+  display name, guests shown as random `UserXXXX`, guest data migrates
+  into the account on signup, scheduled as a new v2.5 milestone pulled out
+  of v3, Principle 2 amended. Design in `specs/accounts-v2.5.md`; open
+  questions (email verification timing, reset/delete-account semantics,
+  leaderboard visibility, free-tier pausing) are listed there.
 - **Settings page (this session):** analytics metrics DECIDED: words
   learned, mastery stats, games played per mode, and points per session
   (last 20, with average) — all local, no tracking. Placement DECIDED as a
