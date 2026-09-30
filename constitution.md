@@ -392,8 +392,9 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       against a hand-written table, -고/-지만 for every word, every
       example sentence confirmed to host a connective, composition/
       distractor/scoring tests), `typecheck`, `build` (all clean), and a
-      running `next dev` serving with no compile errors. Not yet confirmed
-      by hand: click/drag interaction, tile layout at phone width (the
+      running `next dev` serving with no compile errors. Hands-on pass:
+      the user confirmed click and drag-and-drop tile input work as
+      intended. Not yet confirmed by hand: tile layout at phone width (the
       four-button mode switcher now wraps), feedback colors in both themes,
       and how the odd-but-grammatical sentences read in play
 - [x] **Hard mode** — a Normal-mode difficulty modifier: spawns 2 tiles
