@@ -492,9 +492,10 @@ below is built yet. Summary of decisions:
       persisted at `2048-hangul:guestId` and shown in Settings as "Playing
       as UserXXXX (guest)", replacing the free-text name field. Verified
       via `npm run test` (730 passing, +4 identity tests), `typecheck`,
-      `build` (clean), and `next dev` serving with no errors. Not yet
-      confirmed by hand: that existing progress (dictionary, best scores)
-      still loads after the refactor, and the guest label in Settings
+      `build` (clean), and `next dev` serving with no errors. Hands-on
+      pass confirmed by the user: existing dictionary/best scores still
+      load, the guest label shows in Settings, and Reset issues a new
+      label
 - [ ] Supabase project, schema, RLS policies, env wiring
 - [ ] Signup / login / logout UI (in Settings)
 - [ ] Guest → account data migration
