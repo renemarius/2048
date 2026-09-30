@@ -463,6 +463,41 @@ function conjugateFuture(word: string): string {
   }
 }
 
+// --- Connective -(으)면 "if" (specs/connectives-v2.md) ---------------------
+//
+// Same class-by-class stem logic as future tense, different suffix. Like
+// future, no 아/어 vowel-harmony or contraction applies, so 르 and ㅡ words
+// are plain open stems here.
+
+/**
+ * -(으)면: open stems and native ㄹ-batchim stems take 면 (살면 — the 으 is
+ * dropped after ㄹ), other batchim stems take 으면. Irregular classes: ㄷ
+ * swaps to ㄹ but, being derived, keeps the 으 (들으면, unlike 살면); ㅂ
+ * becomes 우 for every word incl. 돕다 (도우면); ㅅ drops but keeps 으
+ * (지으면); ㅎ drops with no 으 and no ㅐ merge (그러면).
+ */
+export function conjugateConditional(word: string): string {
+  const stem = stripDaSuffix(word);
+  const decomposed = decomposeSyllable(stem[stem.length - 1]);
+  if (!decomposed) {
+    throw new Error(`Not a valid Hangul syllable: ${stem[stem.length - 1]}`);
+  }
+  const stemHead = stem.slice(0, -1);
+  const open = composeSyllable(decomposed.initial, decomposed.medial, '');
+  switch (IRREGULAR_CLASS_BY_WORD[word]) {
+    case 'd':
+      return stemHead + composeSyllable(decomposed.initial, decomposed.medial, 'ㄹ') + '으면';
+    case 'b':
+      return stemHead + open + '우면';
+    case 's':
+      return stemHead + open + '으면';
+    case 'h':
+      return stemHead + open + '면';
+    default:
+      return decomposed.final === '' || decomposed.final === 'ㄹ' ? stem + '면' : stem + '으면';
+  }
+}
+
 /**
  * Auto-detecting dispatcher: picks the right pattern-group function from
  * the word's own shape (하다-ending, batchim presence, then vowel class),

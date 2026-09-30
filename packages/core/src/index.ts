@@ -7,3 +7,4 @@ export * from './pool';
 export * from './dictionary';
 export * from './hardmode';
 export * from './concentration';
+export * from './connectives';

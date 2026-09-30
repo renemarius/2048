@@ -29,11 +29,12 @@
   width: 100%;
   max-width: 420px;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
 }
 
 .modeButton {
-  flex: 1;
+  flex: 1 1 auto;
   font: inherit;
   font-size: 0.8rem;
   border: none;
@@ -292,6 +293,99 @@
 
 .concentrationEmpty p {
   margin: 0;
+}
+
+/* Sentence Builder (specs/connectives-v2.md) — English prompt, an answer
+   row, and a word bank of tiles. Reuses the existing tile tokens; only the
+   correct/wrong feedback colors are new tokens (globals.css). */
+.sentenceCard {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.sentenceProgress {
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.sentencePrompt {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.sentenceAnswer,
+.sentenceBank {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border-radius: 10px;
+  min-height: 3.4rem;
+  align-items: center;
+}
+
+.sentenceAnswer {
+  background: var(--board-bg);
+}
+
+.sentenceBank {
+  background: var(--cell-empty);
+}
+
+.sentencePlaceholder {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.sentenceTile {
+  font: inherit;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  background: var(--tile-stem);
+  color: var(--tile-stem-text);
+  cursor: pointer;
+}
+
+.sentenceTile:disabled {
+  cursor: default;
+}
+
+.sentenceTilePlaced {
+  background: var(--tile-word-present);
+  color: var(--tile-word-present-text);
+}
+
+/* A bank tile already moved to the answer row leaves a faint ghost so the
+   bank doesn't reflow under the player's cursor. */
+.sentenceTileUsed {
+  opacity: 0.25;
+}
+
+.sentenceFeedback {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border-left: 4px solid currentColor;
+}
+
+.sentenceCorrect {
+  color: var(--feedback-correct);
+}
+
+.sentenceWrong {
+  color: var(--feedback-wrong);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .modalOverlay {

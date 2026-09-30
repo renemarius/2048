@@ -374,15 +374,28 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       not sentence-final, so they don't fit the stem+ending merge model at
       all; tracked as a separate, unscoped backlog item below instead of
       bundled here.
-- [ ] **Connective forms — Sentence Builder mode** (-고, -지만, -아서/어서,
+- [x] **Connective forms — Sentence Builder mode** (-고, -지만, -아서/어서,
       -(으)면) — cut from the future-tense item above because connectives
-      link clauses and don't fit the stem+ending board merge. Scoped as a
-      standalone Duolingo-style mode: translate an English sentence by
+      link clauses and don't fit the stem+ending board merge. A standalone
+      Duolingo-style "Sentences" mode: translate an English sentence by
       clicking/dragging Korean word tiles (with distractors) into order,
       sentences composed from the existing example sentences and
       dictionary words only, own score with a streak-multiplier combo and
-      its own best-score track. Spec: `specs/connectives-v2.md`. Not yet
-      implemented. `-는데` deliberately excluded from the first cut.
+      its own best-score track (`bestScoreKey('connectives')`), fixed
+      10-sentence sessions, unlocked at 4 learned words. Spec:
+      `specs/connectives-v2.md`. `-는데` deliberately excluded from the
+      first cut. Implemented in `packages/core/src/connectives.ts`
+      (composition, distractors, answer checking, scoring),
+      `conjugateConditional` in `conjugate.ts`, and
+      `apps/web/app/sentence-builder.tsx`. Verified via `npm run test`
+      (718 passing — all 96 words × -아서/어서 and -(으)면 asserted
+      against a hand-written table, -고/-지만 for every word, every
+      example sentence confirmed to host a connective, composition/
+      distractor/scoring tests), `typecheck`, `build` (all clean), and a
+      running `next dev` serving with no compile errors. Not yet confirmed
+      by hand: click/drag interaction, tile layout at phone width (the
+      four-button mode switcher now wraps), feedback colors in both themes,
+      and how the odd-but-grammatical sentences read in play
 - [x] **Hard mode** — a Normal-mode difficulty modifier: spawns 2 tiles
       per move instead of 1, plus a 2-cell "dead zone" that can never be
       spawned into or slid onto (`packages/core/src/hardmode.ts`'s
@@ -525,9 +538,11 @@ between sessions:
     templated safely).
   - **Scoring:** +10 per correct, streak multiplier (x2 at 3, x3 at 5,
     cap x3), reset on wrong, no lives; fourth best-score track.
-  - **OPEN:** fixed 10-sentence session length (proposed), the
-    `CONNECTIVE_MIN_WORDS` gate (proposed 4), and reference-verification
-    of the -(으)면 ㅎ-irregular and ㄹ-batchim rows.
+  - **Resolved at build time:** 10-sentence sessions and the
+    `CONNECTIVE_MIN_WORDS = 4` gate were both confirmed by the user. The
+    -(으)면 ㅎ-irregular and ㄹ-batchim rows were checked from knowledge
+    of standard references, not a live lookup — see the note in
+    `specs/connectives-v2.md`.
 - **Game modes v2 — OPEN items resolved (this session):** `specs/game-modes-v2.md`
   left three exact-mechanic decisions OPEN pending implementation; all
   three were resolved with the user before building:

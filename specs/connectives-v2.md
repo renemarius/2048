@@ -110,11 +110,28 @@ empty state pointing back to Normal, mirroring Concentration's.
   `apps/web/app/storage-keys.ts` (fourth track alongside Normal / Hard /
   Concentration).
 
-### Session length — OPEN (my proposal, please confirm)
+### Session length — DECIDED
 
-A session is **10 sentences**, then a summary card (score, accuracy, best
-streak) with Play again. Without a fixed length the mode has no natural end
-and a "best score" is meaningless in an endless mode with no lives.
+A session is **10 sentences** (`CONNECTIVE_SESSION_LENGTH`), then a summary
+card (score, accuracy, best streak) with Play again. Without a fixed length
+the mode has no natural end and a "best score" is meaningless in an endless
+mode with no lives. Confirmed by the user.
+
+### Implementation notes (added during build)
+
+- `CONNECTIVE_MIN_WORDS = 4` confirmed by the user.
+- The first clause is lowercased too for the "Because C1, …" / "If C1, …"
+  templates (only the second clause was called out above), otherwise
+  "Because The baby laughs" would result. `I`, `I'm`/`I'd`, `Korean` and
+  `Seoul` stay capitalized.
+- `-(으)면` reference check: rows were checked against standard grammar
+  references from knowledge, not a live lookup — the ㅎ row (그러면, 빨가면)
+  and ㄹ-batchim row (살면, 놀면) came out as the spec predicted, and 돕다 →
+  도우면 (not 도오면) follows the same rule as future tense. Worth a native
+  speaker's glance at the 34 Level 2 rows in
+  `connectives.test.ts`'s table if anything looks off in play.
+- Session/answer state is not persisted across reloads (like
+  Concentration); only the best score is.
 
 ## Architecture
 

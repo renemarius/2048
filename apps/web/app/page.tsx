@@ -4,11 +4,14 @@ import { useEffect, useState } from 'react';
 import { Concentration } from './concentration';
 import { Game } from './game';
 import type { GameMode } from './mode-switcher';
+import { SentenceBuilder } from './sentence-builder';
 
 const MODE_KEY = '2048-hangul:mode';
 
 function isGameMode(value: string | null): value is GameMode {
-  return value === 'normal' || value === 'hard' || value === 'concentration';
+  return (
+    value === 'normal' || value === 'hard' || value === 'concentration' || value === 'connectives'
+  );
 }
 
 export default function Home() {
@@ -31,6 +34,8 @@ export default function Home() {
       // see above
     }
   }
+
+  if (mode === 'connectives') return <SentenceBuilder onModeChange={selectMode} />;
 
   return mode === 'concentration' ? (
     <Concentration mode={mode} onModeChange={selectMode} />

@@ -21,6 +21,10 @@
 
   --ui-text: #776e65;
 
+  /* Answer feedback (Sentence Builder) */
+  --feedback-correct: #5d9c59;
+  --feedback-wrong: #c0392b;
+
   /* Dictionary panel — "digital tablet" per specs/ui-v1.md, recolored per
      specs/ui-v2.md to reuse Classic's own warm tokens (board-bg for the
      bezel, tile-stem for the screen) instead of a cool near-black device
@@ -50,6 +54,9 @@
   --tile-word-future-text: #ffffff;
 
   --ui-text: #2b2b2b;
+
+  --feedback-correct: #3f7d5c;
+  --feedback-wrong: #b33a3a;
 
   /* Dictionary panel — "notebook paper" per specs/ui-v1.md */
   --dict-bezel-bg: #f7f5f1;
