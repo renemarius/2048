@@ -9,6 +9,7 @@ import {
   type StatsMode,
 } from 'core';
 import styles from './game.module.css';
+import { logIn, logOut, signUp, useAuth } from './auth';
 import { meaningFor } from './dictionary-storage';
 import { clearAllLocalData, loadOrCreateGuestName } from './identity';
 import { loadBestScore, loadDictionary, loadStats } from './progress-store';
@@ -92,12 +93,7 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         <section className={styles.settingsSection}>
           <h3>Profile</h3>
-          <dl className={styles.statList}>
-            <div className={styles.statRow}>
-              <dt>Playing as</dt>
-              <dd>{name} (guest)</dd>
-            </div>
-          </dl>
+          <AccountSection guestName={name} />
 
           {bests && (
             <>
@@ -221,5 +217,127 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
         </section>
       </div>
     </div>
+  );
+}
+
+function AccountSection({ guestName }: { guestName: string }) {
+  const auth = useAuth();
+  const [form, setForm] = useState<'signup' | 'login'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  if (!auth.ready) return null;
+
+  if (auth.user) {
+    return (
+      <>
+        <dl className={styles.statList}>
+          <div className={styles.statRow}>
+            <dt>Signed in as</dt>
+            <dd>{auth.username ?? auth.user.email}</dd>
+          </div>
+          <div className={styles.statRow}>
+            <dt>Email</dt>
+            <dd>{auth.user.email}</dd>
+          </div>
+        </dl>
+        {!auth.verified && (
+          <p className={styles.settingsMuted}>Verify your email to start syncing your progress.</p>
+        )}
+        <button type="button" className={styles.button} onClick={() => void logOut()}>
+          Log out
+        </button>
+      </>
+    );
+  }
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const result =
+      form === 'signup' ? await signUp(email, password, username.trim()) : await logIn(email, password);
+    setBusy(false);
+    if (!result.ok) setError(result.error);
+    else if (result.message) setNotice(result.message);
+  }
+
+  return (
+    <>
+      <dl className={styles.statList}>
+        <div className={styles.statRow}>
+          <dt>Playing as</dt>
+          <dd>{guestName} (guest)</dd>
+        </div>
+      </dl>
+      {auth.available && (
+        <form className={styles.authForm} onSubmit={submit}>
+          <div className={styles.modeSwitcher} role="tablist" aria-label="Account">
+            {(
+              [
+                ['login', 'Log in'],
+                ['signup', 'Sign up'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={form === value}
+                className={`${styles.modeButton} ${form === value ? styles.modeButtonActive : ''}`}
+                onClick={() => {
+                  setForm(value);
+                  setError(null);
+                  setNotice(null);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {form === 'signup' && (
+            <input
+              type="text"
+              className={styles.dictionarySearch}
+              placeholder="Username"
+              value={username}
+              maxLength={24}
+              autoComplete="username"
+              onChange={(event) => setUsername(event.target.value)}
+              required
+            />
+          )}
+          <input
+            type="email"
+            className={styles.dictionarySearch}
+            placeholder="Email"
+            value={email}
+            autoComplete="email"
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
+          <input
+            type="password"
+            className={styles.dictionarySearch}
+            placeholder="Password"
+            value={password}
+            minLength={form === 'signup' ? 8 : undefined}
+            autoComplete={form === 'signup' ? 'new-password' : 'current-password'}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
+          {error && <p className={styles.authError}>{error}</p>}
+          {notice && <p className={styles.settingsMuted}>{notice}</p>}
+          <button type="submit" className={styles.button} disabled={busy}>
+            {busy ? '…' : form === 'signup' ? 'Create account' : 'Log in'}
+          </button>
+        </form>
+      )}
+    </>
   );
 }

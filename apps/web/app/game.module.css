@@ -830,3 +830,14 @@
   background: var(--feedback-wrong);
   color: #fff;
 }
+
+.authForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.authError {
+  color: var(--feedback-wrong);
+  font-size: 0.85rem;
+}
