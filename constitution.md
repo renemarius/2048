@@ -394,8 +394,8 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       distractor/scoring tests), `typecheck`, `build` (all clean), and a
       running `next dev` serving with no compile errors. Hands-on pass:
       the user confirmed click and drag-and-drop tile input work as
-      intended. Not yet confirmed by hand: tile layout at phone width (the
-      four-button mode switcher now wraps), feedback colors in both themes,
+      intended, and so did the rest: tile layout at phone width (the
+      four-button mode switcher wraps), feedback colors in both themes,
       and how the odd-but-grammatical sentences read in play
 - [x] **Hard mode** — a Normal-mode difficulty modifier: spawns 2 tiles
       per move instead of 1, plus a 2-cell "dead zone" that can never be
