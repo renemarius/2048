@@ -5,6 +5,7 @@ import { Concentration } from './concentration';
 import { Game } from './game';
 import type { GameMode } from './mode-switcher';
 import { SentenceBuilder } from './sentence-builder';
+import { applyTheme, loadTheme } from './theme';
 
 const MODE_KEY = '2048-hangul:mode';
 
@@ -18,6 +19,7 @@ export default function Home() {
   const [mode, setMode] = useState<GameMode>('normal');
 
   useEffect(() => {
+    applyTheme(loadTheme());
     try {
       const saved = window.localStorage.getItem(MODE_KEY);
       if (isGameMode(saved)) setMode(saved);

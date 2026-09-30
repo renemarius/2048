@@ -444,20 +444,24 @@ playtest/deploy checklist items first. See Open Decisions Log below.
       theme (see `specs/ui-v2.md`). Verified via the same automated bar
       as the rules panel above, plus a hands-on browser pass — the user
       confirmed the new palette actually fits
-- [ ] **Settings page** — a dedicated settings page/panel with three
-      sections: (1) **Profile** — user name, scores (best score per mode:
-      Normal / Hard / Concentration), and analytics (local learning stats,
-      e.g. words learned, mastery counts, games played; exact metrics and
-      whether "analytics" means anything beyond local, on-device stats are
-      OPEN — no server-side tracking assumed), (2) **Themes** (switch among the themes that exist —
-      currently Classic / Modern; the full theme gallery stays a v3 item
-      below), and (3) a **Reset data** button that wipes locally stored
-      progress (dictionary, best scores, preferences) behind a confirmation
-      step. Detail spec to live in `specs/` (e.g. `specs/settings-v2.md`)
-      before implementation. DECIDED: reset wipes everything (no
-      selectable scope for now — mainly a dev convenience for resetting
-      one's own progress), and the existing main-screen theme toggle moves
-      into settings. OPEN: which analytics metrics to show.
+- [x] **Settings page** — a "Settings" button in every mode's header opens
+      a modal panel (`apps/web/app/settings.tsx`, spec:
+      `specs/settings-v2.md`) with (1) **Profile** — editable name, best
+      score per mode (all four), and local-only analytics: words learned
+      (L1/L2), total conjugations, most-drilled word, starred count, games
+      played per mode, and points for the last 20 finished sessions with
+      their average; (2) **Theme** — Classic / Modern picker (the old
+      main-screen toggle was removed; `theme.ts` now applies the saved
+      theme on load); (3) **Reset data** — two-step confirm, wipes every
+      `2048-hangul:*` key plus `theme`, then reloads. Analytics metrics
+      were resolved with the user this session. Pure stats logic is in
+      `packages/core/src/stats.ts`. A game counts as played when it ends
+      or is abandoned via restart with score > 0. Verified via
+      `npm run test` (726 passing, incl. new `stats.test.ts`), `typecheck`,
+      `build` (all clean), and a `next dev` serving with no compile errors.
+      Not yet confirmed by hand: modal layout at phone width, name input
+      not moving tiles, theme switching from inside the panel, reset
+      actually wiping and reloading, stats updating after real games
 
 ### v3 — Personalization & polish (future)
 
@@ -544,6 +548,10 @@ between sessions:
     -(으)면 ㅎ-irregular and ㄹ-batchim rows were checked from knowledge
     of standard references, not a live lookup — see the note in
     `specs/connectives-v2.md`.
+- **Settings page (this session):** analytics metrics DECIDED: words
+  learned, mastery stats, games played per mode, and points per session
+  (last 20, with average) — all local, no tracking. Placement DECIDED as a
+  modal panel, not a route. See `specs/settings-v2.md`.
 - **Game modes v2 — OPEN items resolved (this session):** `specs/game-modes-v2.md`
   left three exact-mechanic decisions OPEN pending implementation; all
   three were resolved with the user before building:

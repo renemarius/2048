@@ -12,7 +12,8 @@ import {
 import { loadDictionary, meaningFor, speak } from './dictionary-storage';
 import { ModeSwitcher, type GameMode } from './mode-switcher';
 import { bestScoreKey } from './storage-keys';
-import { ThemeToggle } from './theme-toggle';
+import { SettingsButton } from './settings';
+import { recordFinishedSession } from './stats-storage';
 import styles from './game.module.css';
 
 // Concentration mode (specs/game-modes-v2.md): a standalone memory/match
@@ -93,6 +94,12 @@ export function Concentration({ onModeChange }: { mode: GameMode; onModeChange: 
     }
   }, [won, score, bestScore]);
 
+  useEffect(() => {
+    if (won) recordFinishedSession(MODE, score);
+    // score is final once won; recording must fire once per win only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [won]);
+
   function handleCardClick(card: ConcentrationCard) {
     if (locked || matchedWords.has(card.word) || revealedIds.includes(card.id)) return;
 
@@ -121,6 +128,7 @@ export function Concentration({ onModeChange }: { mode: GameMode; onModeChange: 
 
   function handleNewGame() {
     if (mismatchTimeoutRef.current !== null) window.clearTimeout(mismatchTimeoutRef.current);
+    if (!won && score > 0) recordFinishedSession(MODE, score);
     startNewGame(loadDictionary());
   }
 
@@ -130,7 +138,7 @@ export function Concentration({ onModeChange }: { mode: GameMode; onModeChange: 
     <main className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>2048 Hangul Conjugation</h1>
-        <ThemeToggle />
+        <SettingsButton />
       </div>
 
       <ModeSwitcher mode={MODE} onChange={onModeChange} />

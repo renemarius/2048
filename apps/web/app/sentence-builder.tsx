@@ -13,7 +13,8 @@ import {
 import { loadDictionary, speak, vocabEntryFor } from './dictionary-storage';
 import { ModeSwitcher, type GameMode } from './mode-switcher';
 import { bestScoreKey } from './storage-keys';
-import { ThemeToggle } from './theme-toggle';
+import { SettingsButton } from './settings';
+import { recordFinishedSession } from './stats-storage';
 import styles from './game.module.css';
 
 // Sentence Builder (specs/connectives-v2.md): translate an English sentence
@@ -91,6 +92,12 @@ export function SentenceBuilder({ onModeChange }: { onModeChange: (mode: GameMod
       persistBestScore(score);
     }
   }, [finished, score, bestScore]);
+
+  useEffect(() => {
+    if (finished) recordFinishedSession(MODE, score);
+    // score is final once finished; recording must fire once per session only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished]);
 
   const question = questions[index];
   const checked = result !== null;
@@ -175,7 +182,7 @@ export function SentenceBuilder({ onModeChange }: { onModeChange: (mode: GameMod
     <main className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>2048 Hangul Conjugation</h1>
-        <ThemeToggle />
+        <SettingsButton />
       </div>
 
       <ModeSwitcher mode={MODE} onChange={onModeChange} />

@@ -27,7 +27,8 @@ import {
 import { loadDictionary, meaningFor, persistDictionary, speak, vocabEntryFor } from './dictionary-storage';
 import { ModeSwitcher, type GameMode } from './mode-switcher';
 import { bestScoreKey, LEGACY_BEST_SCORE_KEY, LEGACY_SESSION_KEY, sessionKey } from './storage-keys';
-import { ThemeToggle } from './theme-toggle';
+import { SettingsButton } from './settings';
+import { recordFinishedSession } from './stats-storage';
 import styles from './game.module.css';
 
 type NormalOrHardMode = Extract<GameMode, 'normal' | 'hard'>;
@@ -296,6 +297,7 @@ export function Game({
   const [dictionaryFilter, setDictionaryFilter] = useState<DictionaryFilter>('all');
   const [dictionarySort, setDictionarySort] = useState<DictionarySort>('learned');
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [newWordToast, setNewWordToast] = useState<string[] | null>(null);
   const [level2Toast, setLevel2Toast] = useState(false);
   const [level3Toast, setLevel3Toast] = useState(false);
@@ -485,6 +487,7 @@ export function Game({
 
       if (isGameOver(nextBoard, nextBlocked)) {
         setGameOver(true);
+        recordFinishedSession(mode, nextScore);
       }
 
       if (result.completedWords.length > 0) {
@@ -500,7 +503,7 @@ export function Game({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (rulesOpen) return; // blocking modal — don't move the board underneath it
+      if (rulesOpen || settingsOpen) return; // blocking modal — don't move the board underneath it
       const direction = KEY_TO_DIRECTION[event.key];
       if (direction) {
         event.preventDefault();
@@ -509,7 +512,7 @@ export function Game({
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleMove, rulesOpen]);
+  }, [handleMove, rulesOpen, settingsOpen]);
 
   // The dictionary drawer is docked, not a blocking modal (constitution.md
   // Open Decisions Log) — gameplay keeps working while it's open. Escape
@@ -536,6 +539,7 @@ export function Game({
   }, [rulesOpen]);
 
   function handleRestart() {
+    if (!gameOver && score > 0) recordFinishedSession(mode, score);
     const session = newSession(unlockedVocab(dictionary), mode, isFutureUnlocked(dictionary));
     setBoard(session.board);
     setScore(0);
@@ -564,7 +568,7 @@ export function Game({
     <main className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>2048 Hangul Conjugation</h1>
-        <ThemeToggle />
+        <SettingsButton onOpenChange={setSettingsOpen} />
       </div>
 
       <ModeSwitcher mode={mode} onChange={onModeChange} />

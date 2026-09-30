@@ -734,3 +734,99 @@
 :global(html[data-theme='modern']) .dictionaryRow {
   border-bottom: none;
 }
+
+/* Settings panel (specs/settings-v2.md) — same overlay/card as .modal,
+   scrollable since the analytics list can outgrow a phone screen. */
+.settingsModal {
+  max-width: 420px;
+  text-align: left;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.settingsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settingsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--dict-divider);
+}
+
+.settingsSection h3,
+.settingsSection h4 {
+  margin: 0;
+}
+
+.settingsSection h4 {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  margin-top: 0.25rem;
+}
+
+.settingsRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.settingsRow input {
+  flex: 1;
+  min-width: 0;
+}
+
+.settingsMuted {
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+
+.statList {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.statRow dt {
+  opacity: 0.8;
+}
+
+.statRow dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+}
+
+.sessionList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 8rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sessionList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.dangerButton {
+  background: var(--feedback-wrong);
+  color: #fff;
+}
