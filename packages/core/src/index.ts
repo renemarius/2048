@@ -10,3 +10,4 @@ export * from './concentration';
 export * from './connectives';
 export * from './stats';
 export * from './identity';
+export * from './sync';

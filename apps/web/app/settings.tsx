@@ -9,10 +9,17 @@ import {
   type StatsMode,
 } from 'core';
 import styles from './game.module.css';
-import { logIn, logOut, signUp, useAuth } from './auth';
+import { logIn, signUp, useAuth, type AuthState } from './auth';
 import { meaningFor } from './dictionary-storage';
 import { clearAllLocalData, loadOrCreateGuestName } from './identity';
 import { loadBestScore, loadDictionary, loadStats } from './progress-store';
+import {
+  deleteAccount,
+  finishLogout,
+  prepareLogout,
+  resetAccountData,
+  useSyncStatus,
+} from './sync';
 import { THEMES, applyTheme, loadTheme, type Theme } from './theme';
 
 const MODE_LABELS: Record<StatsMode, string> = {
@@ -47,6 +54,12 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [bests, setBests] = useState<Record<StatsMode, number> | null>(null);
   const [dict, setDict] = useState<ReturnType<typeof dictionaryStats> | null>(null);
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteTyped, setDeleteTyped] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [working, setWorking] = useState(false);
+  const auth = useAuth();
 
   // Read on open rather than on mount of the page: the games write to
   // localStorage, so this always reflects the latest state.
@@ -76,10 +89,28 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
     applyTheme(next, true);
   }
 
-  function handleReset() {
-    clearAllLocalData();
-    window.location.reload();
+  async function handleReset() {
+    setResetError(null);
+    if (!auth.user) {
+      clearAllLocalData();
+      window.location.reload();
+      return;
+    }
+    setWorking(true);
+    const result = await resetAccountData();
+    setWorking(false);
+    if (!result.ok) setResetError(result.error);
   }
+
+  async function handleDelete() {
+    setDeleteError(null);
+    setWorking(true);
+    const result = await deleteAccount();
+    setWorking(false);
+    if (!result.ok) setDeleteError(result.error);
+  }
+
+  const accountLabel = auth.username ?? auth.user?.email ?? 'your account';
 
   return (
     <div className={styles.modalOverlay}>
@@ -93,7 +124,7 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         <section className={styles.settingsSection}>
           <h3>Profile</h3>
-          <AccountSection guestName={name} />
+          <AccountSection guestName={name} auth={auth} />
 
           {bests && (
             <>
@@ -194,12 +225,19 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
         <section className={styles.settingsSection}>
           <h3>Reset data</h3>
           <p className={styles.settingsMuted}>
-            Erases your dictionary, best scores, stats, name, and saved games on this device.
+            {auth.user
+              ? `Erases your dictionary, best scores, stats, and saved games on this device and from ${accountLabel}. The account itself stays.`
+              : 'Erases your dictionary, best scores, stats, and saved games on this device.'}
           </p>
           {confirmingReset ? (
             <div className={styles.settingsRow}>
-              <button type="button" className={`${styles.button} ${styles.dangerButton}`} onClick={handleReset}>
-                Yes, erase everything
+              <button
+                type="button"
+                className={`${styles.button} ${styles.dangerButton}`}
+                onClick={() => void handleReset()}
+                disabled={working}
+              >
+                {auth.user ? `Yes, erase everything for ${accountLabel}` : 'Yes, erase everything'}
               </button>
               <button type="button" className={styles.button} onClick={() => setConfirmingReset(false)}>
                 Cancel
@@ -214,14 +252,66 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
               Reset all data…
             </button>
           )}
+          {resetError && <p className={styles.authError}>{resetError}</p>}
         </section>
+
+        {auth.user && (
+          <section className={styles.settingsSection}>
+            <h3>Delete account</h3>
+            <p className={styles.settingsMuted}>
+              Permanently deletes {accountLabel} and everything stored for it. This can&apos;t be
+              undone.
+            </p>
+            {confirmingDelete ? (
+              <>
+                <input
+                  type="text"
+                  className={styles.dictionarySearch}
+                  placeholder={`Type ${auth.username ?? 'your email'} to confirm`}
+                  value={deleteTyped}
+                  onChange={(event) => setDeleteTyped(event.target.value)}
+                  aria-label="Type your username to confirm deletion"
+                />
+                <div className={styles.settingsRow}>
+                  <button
+                    type="button"
+                    className={`${styles.button} ${styles.dangerButton}`}
+                    disabled={working || deleteTyped !== (auth.username ?? auth.user.email)}
+                    onClick={() => void handleDelete()}
+                  >
+                    Delete my account
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.button}
+                    onClick={() => {
+                      setConfirmingDelete(false);
+                      setDeleteTyped('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <button
+                type="button"
+                className={`${styles.button} ${styles.dangerButton}`}
+                onClick={() => setConfirmingDelete(true)}
+              >
+                Delete account…
+              </button>
+            )}
+            {deleteError && <p className={styles.authError}>{deleteError}</p>}
+          </section>
+        )}
       </div>
     </div>
   );
 }
 
-function AccountSection({ guestName }: { guestName: string }) {
-  const auth = useAuth();
+function AccountSection({ guestName, auth }: { guestName: string; auth: AuthState }) {
+  const syncStatus = useSyncStatus();
   const [form, setForm] = useState<'signup' | 'login'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -248,7 +338,29 @@ function AccountSection({ guestName }: { guestName: string }) {
         {!auth.verified && (
           <p className={styles.settingsMuted}>Verify your email to start syncing your progress.</p>
         )}
-        <button type="button" className={styles.button} onClick={() => void logOut()}>
+        {auth.verified && (
+          <p className={styles.settingsMuted}>
+            {syncStatus === 'syncing' && 'Syncing…'}
+            {syncStatus === 'synced' && 'Progress synced to your account.'}
+            {syncStatus === 'error' && "Couldn't sync — will retry when you're online."}
+          </p>
+        )}
+        <button
+          type="button"
+          className={styles.button}
+          onClick={async () => {
+            const safe = await prepareLogout();
+            if (
+              !safe &&
+              !window.confirm(
+                'Some progress has not synced yet and will be lost if you log out now. Log out anyway?',
+              )
+            ) {
+              return;
+            }
+            await finishLogout();
+          }}
+        >
           Log out
         </button>
       </>

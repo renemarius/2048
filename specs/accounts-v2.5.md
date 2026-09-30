@@ -74,6 +74,21 @@ helper so **writes** (insert/update) require a confirmed email while reads
 and deletes don't (Reset must always work); and a trigger keeping
 `session_records` at 20 rows per user.
 
+### Sync implementation notes (as built)
+
+- Migration `0003_sync_functions.sql` adds `learned_at` (dictionary order)
+  and SECURITY INVOKER RPCs — `upsert_dictionary`, `upsert_best_score`
+  (`greatest`), `record_session`, `import_guest_stats` — so RLS still
+  applies and races resolve server-side; plus `delete_my_account()`
+  (SECURITY DEFINER).
+- Guest stats import once per device+account (`2048-hangul:syncedUser`
+  marker). Sessions finished before that marker exists are not also queued
+  in the outbox, to avoid double counting.
+- Logout clears the local progress cache (after a push attempt, with a
+  warning if unsynced) so accounts never bleed into each other on a shared
+  device. The `bookmarked` flag is last-write-wins; counts/scores/games are
+  max/increment.
+
 ## Sync model
 
 - Signed out: localStorage is the store (unchanged behavior).

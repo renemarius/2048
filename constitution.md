@@ -510,11 +510,40 @@ below is built yet. Summary of decisions:
       confirmed by the user against the live project: signup, email
       verification, login showing the username, and the "verify your email
       to start syncing" notice before verification
-- [ ] Guest → account data migration
-- [ ] Server-backed reads/writes with offline cache
-- [ ] Settings profile & reset reworked for accounts (username replaces
-      the free-text name; reset wipes device + server copy, keeps account)
-- [ ] Delete account (separate from reset, typed confirmation; built last)
+- [x] Guest → account data migration — first verified sync on a device
+      merges local + server (`mergeDictionaries`/`mergeBestScores`/
+      `statsFromServer` in `packages/core/src/sync.ts`, unit tested:
+      union words, max counts/scores, OR stars, idempotent) and uploads the
+      guest's games-played counters and recent sessions once via
+      `import_guest_stats` (marker in localStorage prevents repeats)
+- [x] Server-backed reads/writes with offline cache —
+      `apps/web/app/sync.ts`: localStorage stays the synchronous surface,
+      wrapped by `syncedProgressStore`; while signed in, saves queue a
+      debounced background push (dictionary + best scores via
+      `upsert_dictionary`/`upsert_best_score`, finished sessions via an
+      outbox + `record_session`), retried on the browser's `online` event.
+      Full pull-merge-push runs on login/startup and reloads the page only
+      if the pull changed local data. Logging out pushes first (warns if
+      unsynced), then clears the local cache so the next login on the
+      device can't inherit the previous account's data. Server functions
+      in `supabase/migrations/0003_sync_functions.sql`
+- [x] Settings profile & reset reworked for accounts — username shown when
+      signed in (guests see `UserXXXX`), sync status line, and Reset for a
+      signed-in user deletes the server rows too (account kept), with a
+      confirmation naming the account
+- [x] Delete account — separate Settings section, typed-username
+      confirmation, `delete_my_account()` RPC (deletes the auth user; every
+      table cascades)
+- Verification for the four items above: `npm run test` (737 passing, incl.
+  new merge tests), `typecheck`, `build`, `next dev` clean, and all three
+  SQL migrations run against a throwaway local Postgres with a stubbed
+  `auth` schema — covering the signup trigger, dictionary max/order/star
+  semantics, best-score `greatest`, session pruning to 20, cross-user
+  isolation, unverified writes blocked, anon blocked, and account deletion
+  cascading. **Not yet confirmed by hand against the live project:** the
+  browser sync path end to end (guest → signup → data appears on a second
+  browser/device, offline queue, logout clearing, reset, delete) and that
+  `0003_sync_functions.sql` has been applied there
 
 ### v3 — Personalization & polish (future)
 
