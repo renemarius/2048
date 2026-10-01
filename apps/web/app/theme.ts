@@ -1,18 +1,16 @@
-export type Theme = 'classic' | 'modern';
+import { DEFAULT_THEME, THEMES, isThemeId, type ThemeId } from 'core';
 
-export const THEMES: Array<[Theme, string]> = [
-  ['classic', 'Classic'],
-  ['modern', 'Modern ink & paper'],
-];
+export type Theme = ThemeId;
+export { THEMES };
 
 const STORAGE_KEY = 'theme';
 
 export function loadTheme(): Theme {
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    return stored === 'modern' ? 'modern' : 'classic';
+    return isThemeId(stored) ? stored : DEFAULT_THEME;
   } catch {
-    return 'classic';
+    return DEFAULT_THEME;
   }
 }
 

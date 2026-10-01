@@ -41,7 +41,7 @@
   border-radius: 6px;
   padding: 0.4rem 0.5rem;
   background: var(--cell-empty);
-  color: var(--ui-text);
+  color: var(--board-text);
   opacity: 0.7;
   cursor: pointer;
 }
@@ -55,6 +55,55 @@
   color: var(--tile-ending-text);
   opacity: 1;
   font-weight: 700;
+}
+
+/* Theme picker (specs/personalization-v3.md): each card previews the
+   theme's own board + tile colours, so the swatch inline styles are
+   per-theme data, not a hard-coded look. */
+.themeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.5rem;
+}
+
+.themeCard {
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: var(--cell-empty);
+  color: var(--board-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.themeCard:hover {
+  border-color: var(--board-bg);
+}
+
+.themeCardActive {
+  border-color: var(--tile-ending);
+  font-weight: 700;
+}
+
+.themeSwatch {
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border-radius: 5px;
+}
+
+.themeSwatchTile {
+  flex: 1;
+  height: 22px;
+  border-radius: 3px;
+}
+
+.themeCardLabel {
+  font-size: 0.8rem;
 }
 
 .controls {
@@ -74,6 +123,7 @@
 
 .scoreBox {
   background: var(--board-bg);
+  color: var(--board-text);
   border-radius: 6px;
   padding: 0.4rem 0.75rem;
   text-align: center;
@@ -288,6 +338,7 @@
   gap: 0.75rem;
   padding: 1.5rem 1rem;
   background: var(--board-bg);
+  color: var(--board-text);
   border-radius: 10px;
 }
 
@@ -331,10 +382,12 @@
 
 .sentenceAnswer {
   background: var(--board-bg);
+  color: var(--board-text);
 }
 
 .sentenceBank {
   background: var(--cell-empty);
+  color: var(--board-text);
 }
 
 .sentencePlaceholder {

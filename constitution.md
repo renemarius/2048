@@ -548,10 +548,23 @@ items below are built and verified. Summary of decisions:
 
 ### v3 — Personalization & polish (future)
 
-- [ ] Full theme gallery beyond v1's two defaults (pastel, gothic, neon,
-      monotone...)
-- [ ] Mobile app (React Native/Expo, reusing `packages/core`)
-- [ ] Leaderboards / achievements / daily challenges
+Detailed design in [`specs/personalization-v3.md`](specs/personalization-v3.md)
+(build order: themes → achievements → leaderboards).
+
+- [x] Full theme gallery beyond v1's two defaults — six new themes
+      (monochrome, pastel, RGB, tech, cat, dog) built from
+      `packages/core/src/themes.ts`, swatch picker in Settings, contrast +
+      distinctness tests (801 core tests, typecheck, build clean). Hands-on
+      pass by the user found dark-on-dark text on Monochrome's black board
+      (score boxes, Sentences prompt); fixed with a new `board-text` token
+      (text on board/empty-cell backgrounds, contrast-tested for every new
+      theme) and re-confirmed
+- [ ] Achievements — words learned / words mastered / login streak /
+      score / modes; core table + evaluator, synced, Settings grid + toast
+- [ ] Leaderboards — all-time best score (tab per mode), public username
+      + score only, opt-out toggle, **publicly viewable without an account**
+- [ ] Mobile app (React Native/Expo, reusing `packages/core`) — not yet
+      specced; gets its own spec when picked up
 
 Later versions (v4+) to be defined once v3 ships.
 
@@ -641,6 +654,18 @@ between sessions:
   a separate Delete account action, built last; leaderboards later expose
   public usernames + best scores only via a read-only view; Supabase
   free-tier pausing accepted for now.
+- **v3 scoping (this session):** detail in `specs/personalization-v3.md`.
+  DECIDED: spec themes, leaderboards, and achievements first (mobile app deferred to its own spec); keep v3 as one
+  milestone rather than sub-versions; themes are a **fixed preset
+  gallery** (no custom editor, no unlockable themes). Themes: six new
+  palettes DECIDED and built (monochrome, pastel, RGB, tech, cat, dog;
+  cat/dog are color-only). Achievements: categories DECIDED (words
+  learned, words mastered, login streak, score, modes). Leaderboards:
+  visitors can view without signing in. A **daily challenge
+  was proposed and dropped** by the user, so leaderboards are simply
+  all-time best score per username (no daily board, no seeded RNG). Still
+  OPEN, listed in the spec: exact achievement tiers and whether the login streak
+  needs a game played rather than just opening the app.
 - **Settings page (this session):** analytics metrics DECIDED: words
   learned, mastery stats, games played per mode, and points per session
   (last 20, with average) — all local, no tracking. Placement DECIDED as a

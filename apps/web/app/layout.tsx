@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { THEME_IDS, themeCss } from 'core';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -12,10 +13,14 @@ export const metadata: Metadata = {
 // fonts aren't split into small subset files the way Latin scripts are),
 // so self-hosted optimization isn't available here. Loading it as a plain
 // stylesheet link is the standard workaround — see specs/ui-v1.md.
+const themeBootScript = `try{var t=localStorage.getItem('theme');if(${JSON.stringify(THEME_IDS)}.indexOf(t)>-1)document.documentElement.setAttribute('data-theme',t)}catch(e){}`;
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <style dangerouslySetInnerHTML={{ __html: themeCss() }} />
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"

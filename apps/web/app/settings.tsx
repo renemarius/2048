@@ -206,17 +206,26 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         <section className={styles.settingsSection}>
           <h3>Theme</h3>
-          <div className={styles.modeSwitcher} role="radiogroup" aria-label="Theme">
-            {THEMES.map(([value, label]) => (
+          <div className={styles.themeGrid} role="radiogroup" aria-label="Theme">
+            {THEMES.map(({ id, label, emoji, tokens }) => (
               <button
-                key={value}
+                key={id}
                 type="button"
                 role="radio"
-                aria-checked={theme === value}
-                className={`${styles.modeButton} ${theme === value ? styles.modeButtonActive : ''}`}
-                onClick={() => handleTheme(value)}
+                aria-checked={theme === id}
+                className={`${styles.themeCard} ${theme === id ? styles.themeCardActive : ''}`}
+                onClick={() => handleTheme(id)}
               >
-                {label}
+                <span className={styles.themeSwatch} style={{ background: tokens['board-bg'] }} aria-hidden="true">
+                  {(['tile-stem', 'tile-ending', 'tile-word-present', 'tile-word-past', 'tile-word-future'] as const).map(
+                    (key) => (
+                      <span key={key} className={styles.themeSwatchTile} style={{ background: tokens[key] }} />
+                    ),
+                  )}
+                </span>
+                <span className={styles.themeCardLabel}>
+                  {emoji} {label}
+                </span>
               </button>
             ))}
           </div>
